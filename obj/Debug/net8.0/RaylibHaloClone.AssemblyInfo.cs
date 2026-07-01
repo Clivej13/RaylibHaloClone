@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("RaylibHaloClone")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+f7aea6d9ade43dc00a35a924494047fe73a6964a")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+45d9066b17010e504bb74f887fa764a85bc72ba9")]
 [assembly: System.Reflection.AssemblyProductAttribute("RaylibHaloClone")]
 [assembly: System.Reflection.AssemblyTitleAttribute("RaylibHaloClone")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
