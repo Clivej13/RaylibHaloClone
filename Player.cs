@@ -8,6 +8,8 @@ public sealed class Player
     public const float EyeHeight = 1.75f;
 
     private const float Radius = 0.35f;
+    private const float Height = 1.9f;
+    private const float GroundSnapTolerance = 0.05f;
     private const float WalkSpeed = 6f;
     private const float SprintSpeed = 10f;
     private const float Acceleration = 14f;
@@ -26,7 +28,8 @@ public sealed class Player
     public Player(Vector3 spawnPosition)
     {
         position = spawnPosition;
-        Camera = new Camera3D(position, position + Forward, Vector3.UnitY, 75f, CameraProjection.Perspective);
+        Vector3 cameraPosition = GetCameraPosition();
+        Camera = new Camera3D(cameraPosition, cameraPosition + Forward, Vector3.UnitY, 75f, CameraProjection.Perspective);
     }
 
     public Camera3D Camera { get; private set; }
@@ -97,58 +100,101 @@ public sealed class Player
 
     private void MoveAndCollide(Level level, float deltaTime)
     {
-        MoveAxis(level, new Vector3(velocity.X * deltaTime, 0f, 0f), Axis.X);
-        MoveAxis(level, new Vector3(0f, 0f, velocity.Z * deltaTime), Axis.Z);
+        grounded = false;
 
-        position.Y += velocity.Y * deltaTime;
-        if (position.Y <= EyeHeight)
-        {
-            position.Y = EyeHeight;
-            velocity.Y = 0f;
-            grounded = true;
-        }
+        MoveHorizontalAxis(level, velocity.X * deltaTime, Axis.X);
+        MoveHorizontalAxis(level, velocity.Z * deltaTime, Axis.Z);
+        MoveVertical(level, velocity.Y * deltaTime);
 
         position = level.ClampToArena(position, Radius);
     }
 
-    private void MoveAxis(Level level, Vector3 delta, Axis axis)
+    private void MoveHorizontalAxis(Level level, float delta, Axis axis)
     {
-        position += delta;
+        if (delta == 0f)
+        {
+            return;
+        }
+
+        if (axis == Axis.X)
+        {
+            position.X += delta;
+        }
+        else
+        {
+            position.Z += delta;
+        }
+
         position = level.ClampToArena(position, Radius);
 
-        BoundingBox playerBox = CreatePlayerBox(position);
         foreach (BoundingBox box in level.CollisionBoxes)
         {
-            if (!Raylib.CheckCollisionBoxes(playerBox, box))
+            if (!Raylib.CheckCollisionBoxes(CreatePlayerBox(position), box))
             {
                 continue;
             }
 
             if (axis == Axis.X)
             {
-                position.X = delta.X > 0f ? box.Min.X - Radius : box.Max.X + Radius;
+                position.X = delta > 0f ? box.Min.X - Radius : box.Max.X + Radius;
                 velocity.X = 0f;
             }
             else
             {
-                position.Z = delta.Z > 0f ? box.Min.Z - Radius : box.Max.Z + Radius;
+                position.Z = delta > 0f ? box.Min.Z - Radius : box.Max.Z + Radius;
                 velocity.Z = 0f;
             }
 
-            playerBox = CreatePlayerBox(position);
+            position = level.ClampToArena(position, Radius);
         }
     }
 
-    private BoundingBox CreatePlayerBox(Vector3 center)
+    private void MoveVertical(Level level, float delta)
     {
-        Vector3 min = new(center.X - Radius, center.Y - EyeHeight, center.Z - Radius);
-        Vector3 max = new(center.X + Radius, center.Y + 0.1f, center.Z + Radius);
+        float previousY = position.Y;
+        position.Y += delta;
+
+        foreach (BoundingBox box in level.CollisionBoxes)
+        {
+            if (!Raylib.CheckCollisionBoxes(CreatePlayerBox(position), box))
+            {
+                continue;
+            }
+
+            if (delta <= 0f && previousY >= box.Max.Y - GroundSnapTolerance)
+            {
+                position.Y = box.Max.Y;
+                velocity.Y = 0f;
+                grounded = true;
+            }
+            else if (delta > 0f && previousY + Height <= box.Min.Y + GroundSnapTolerance)
+            {
+                position.Y = box.Min.Y - Height;
+                velocity.Y = 0f;
+            }
+        }
+
+        if (position.Y <= 0f)
+        {
+            position.Y = 0f;
+            velocity.Y = 0f;
+            grounded = true;
+        }
+    }
+
+    private BoundingBox CreatePlayerBox(Vector3 feetPosition)
+    {
+        Vector3 min = new(feetPosition.X - Radius, feetPosition.Y, feetPosition.Z - Radius);
+        Vector3 max = new(feetPosition.X + Radius, feetPosition.Y + Height, feetPosition.Z + Radius);
         return new BoundingBox(min, max);
     }
 
+    private Vector3 GetCameraPosition() => position + new Vector3(0f, EyeHeight, 0f);
+
     private void UpdateCamera()
     {
-        Camera = new Camera3D(position, position + Forward, Vector3.UnitY, Camera.FovY, Camera.Projection);
+        Vector3 cameraPosition = GetCameraPosition();
+        Camera = new Camera3D(cameraPosition, cameraPosition + Forward, Vector3.UnitY, Camera.FovY, Camera.Projection);
     }
 
     private static float MoveTowards(float current, float target, float maxDelta)

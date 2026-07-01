@@ -13,7 +13,7 @@ public sealed class Level
     private static readonly Color WallColor = new(82, 92, 108, 255);
     private static readonly Color CoverColor = new(100, 111, 128, 255);
 
-    public Vector3 PlayerSpawnPosition { get; } = new(0f, Player.EyeHeight, 8f);
+    public Vector3 PlayerSpawnPosition { get; } = new(0f, 0f, 8f);
     public IReadOnlyList<BoundingBox> CollisionBoxes => collisionBoxes;
 
     private readonly List<BoundingBox> collisionBoxes = new();
