@@ -28,15 +28,31 @@ public sealed class WeaponViewModel
     {
         float bob = MathF.Sin(bobPhase) * BobAmount;
         float recoil = recoilRemaining / RecoilDuration;
-        Vector3 basePosition = new(0.55f, -0.45f + bob, 1.15f - recoil * RecoilKick);
+
+        // Raylib's viewmodel camera projects negative local X on the right side of the screen.
+        // Keep the weapon right-handed and mirror the asymmetric details onto the camera-facing side.
+        Vector3 basePosition = new(-0.55f, -0.45f + bob, 1.15f - recoil * RecoilKick);
 
         Camera3D viewCamera = new(Vector3.Zero, Vector3.UnitZ, Vector3.UnitY, 60f, CameraProjection.Perspective);
 
         Raylib.BeginMode3D(viewCamera);
+
+        // Main receiver/body.
         DrawPart(basePosition, new Vector3(0.22f, 0.18f, 0.75f), new Color(48, 55, 62, 255));
+
+        // Top housing/sight block.
         DrawPart(basePosition + new Vector3(0f, 0.09f, -0.22f), new Vector3(0.18f, 0.12f, 0.26f), new Color(75, 84, 95, 255));
+
+        // Grip/magazine under the weapon.
         DrawPart(basePosition + new Vector3(0f, -0.16f, -0.08f), new Vector3(0.14f, 0.3f, 0.16f), new Color(34, 38, 44, 255));
+
+        // Forward barrel section.
         DrawPart(basePosition + new Vector3(0f, 0.01f, 0.48f), new Vector3(0.12f, 0.1f, 0.45f), new Color(40, 45, 52, 255));
+
+        // Camera-facing detail side. This is mirrored to positive local X because the weapon now sits on screen-right.
+        DrawPart(basePosition + new Vector3(0.13f, 0.03f, 0.02f), new Vector3(0.035f, 0.14f, 0.50f), new Color(88, 99, 112, 255));
+        DrawPart(basePosition + new Vector3(0.15f, 0.095f, 0.20f), new Vector3(0.025f, 0.035f, 0.18f), new Color(112, 125, 140, 255));
+
         Raylib.EndMode3D();
     }
 
