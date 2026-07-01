@@ -12,6 +12,9 @@ public sealed class Enemy
     private const float Width = 0.9f;
     private const float Height = 2.1f;
     private const float Depth = 0.9f;
+    private const float DamageFlashTime = 0.12f;
+
+    private float damageFlashRemaining;
 
     public Enemy(Vector3 position, float health = 100f)
     {
@@ -22,6 +25,7 @@ public sealed class Enemy
     public Vector3 Position { get; }
     public float Health { get; private set; }
     public bool IsAlive => Health > 0f;
+    private bool IsDamageFlashing => damageFlashRemaining > 0f;
 
     public BoundingBox Hitbox
     {
@@ -33,6 +37,11 @@ public sealed class Enemy
         }
     }
 
+    public void Update(float deltaTime)
+    {
+        damageFlashRemaining = MathF.Max(0f, damageFlashRemaining - deltaTime);
+    }
+
     public void TakeDamage(float damage)
     {
         if (!IsAlive)
@@ -41,6 +50,7 @@ public sealed class Enemy
         }
 
         Health = MathF.Max(0f, Health - damage);
+        damageFlashRemaining = DamageFlashTime;
     }
 
     public void Render()
@@ -54,9 +64,12 @@ public sealed class Enemy
         Vector3 bodySize = new(Width, 1.6f, Depth);
         Vector3 headCenter = Position + new Vector3(0f, 1.85f, 0f);
 
-        Raylib.DrawCubeV(bodyCenter, bodySize, BodyColor);
+        Color bodyColor = IsDamageFlashing ? Color.White : BodyColor;
+        Color headColor = IsDamageFlashing ? Color.White : HeadColor;
+
+        Raylib.DrawCubeV(bodyCenter, bodySize, bodyColor);
         Raylib.DrawCubeWiresV(bodyCenter, bodySize, WireColor);
-        Raylib.DrawSphere(headCenter, 0.32f, HeadColor);
+        Raylib.DrawSphere(headCenter, 0.32f, headColor);
         Raylib.DrawSphereWires(headCenter, 0.32f, 8, 8, WireColor);
     }
 }

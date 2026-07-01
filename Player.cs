@@ -3,6 +3,8 @@ using Raylib_cs;
 
 namespace RaylibHaloClone;
 
+public readonly record struct CombatUpdateResult(bool Fired, bool Hit);
+
 public sealed class Player
 {
     public const float EyeHeight = 1.75f;
@@ -39,6 +41,7 @@ public sealed class Player
     public Vector3 CameraPosition => GetCameraPosition();
     public Weapon CurrentWeapon { get; } = Weapon.CreateRifle();
     public float CurrentHorizontalSpeed => MathUtils.Flatten(velocity).Length();
+    public float MovementBobSpeed => CurrentHorizontalSpeed;
 
     private Vector3 Forward
     {
@@ -71,14 +74,22 @@ public sealed class Player
         UpdateCamera();
     }
 
-    public void UpdateCombat(IReadOnlyList<Enemy> enemies, float deltaTime)
+    public CombatUpdateResult UpdateCombat(IReadOnlyList<Enemy> enemies, float deltaTime)
     {
         CurrentWeapon.Update(deltaTime);
 
-        if (Raylib.IsMouseButtonDown(MouseButton.Left))
+        if (Raylib.IsKeyPressed(KeyboardKey.R))
         {
-            CurrentWeapon.Fire(CameraPosition, LookDirection, enemies);
+            CurrentWeapon.Reload();
         }
+
+        if (!Raylib.IsMouseButtonDown(MouseButton.Left))
+        {
+            return new CombatUpdateResult(false, false);
+        }
+
+        WeaponFireResult fireResult = CurrentWeapon.Fire(CameraPosition, LookDirection, enemies);
+        return new CombatUpdateResult(fireResult.Fired, fireResult.Hit);
     }
 
     public void FixedUpdate(Level level, float deltaTime)
