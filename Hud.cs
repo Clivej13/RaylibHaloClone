@@ -9,12 +9,17 @@ public sealed class Hud
 
     private float hitMarkerRemaining;
 
+    public void Reset()
+    {
+        hitMarkerRemaining = 0f;
+    }
+
     public void UpdateHitMarker(bool hit, float deltaTime)
     {
         hitMarkerRemaining = hit ? HitMarkerDuration : MathF.Max(0f, hitMarkerRemaining - deltaTime);
     }
 
-    public void Render(Player player, int livingEnemies)
+    public void Render(Player player, int livingEnemies, MatchState matchState)
     {
         int screenWidth = Raylib.GetScreenWidth();
         int screenHeight = Raylib.GetScreenHeight();
@@ -36,14 +41,32 @@ public sealed class Hud
         Raylib.DrawText($"Speed: {player.CurrentHorizontalSpeed:0.00} m/s", Padding, Padding + 58, 20, Color.RayWhite);
         Raylib.DrawText($"Weapon: {player.CurrentWeapon.Name}", Padding, Padding + 84, 20, Color.RayWhite);
         Raylib.DrawText($"Ammo: {player.CurrentWeapon.MagazineAmmo}/{player.CurrentWeapon.MagazineSize} | Reserve: {player.CurrentWeapon.ReserveAmmo}", Padding, Padding + 110, 20, Color.RayWhite);
-        Raylib.DrawText($"Targets: {livingEnemies}", Padding, Padding + 136, 20, Color.RayWhite);
+        Raylib.DrawText($"Shield: {player.Shield:0} | Health: {player.Health:0}", Padding, Padding + 136, 20, player.IsAlive ? Color.SkyBlue : Color.Red);
+        Raylib.DrawText($"Targets: {livingEnemies}", Padding, Padding + 162, 20, Color.RayWhite);
 
-        if (player.CurrentWeapon.IsReloading)
+        if (player.CurrentWeapon.IsReloading && matchState == MatchState.Playing)
         {
             Raylib.DrawText("RELOADING", centerX - 58, centerY + 34, 22, Color.Gold);
         }
 
+        if (matchState != MatchState.Playing)
+        {
+            RenderMatchMessage(matchState, centerX, centerY);
+        }
+
         Raylib.DrawText("WASD Move | Shift Sprint | Space Jump | Mouse Look | LMB Fire | R Reload", Padding, screenHeight - 34, 20, Color.LightGray);
+    }
+
+    private static void RenderMatchMessage(MatchState matchState, int centerX, int centerY)
+    {
+        string message = matchState == MatchState.Victory
+            ? "VICTORY - Press Enter to Restart"
+            : "DEFEATED - Press Enter to Restart";
+        Color color = matchState == MatchState.Victory ? Color.Gold : Color.Red;
+        int fontSize = 34;
+        int textWidth = Raylib.MeasureText(message, fontSize);
+        Raylib.DrawRectangle(centerX - (textWidth / 2) - 18, centerY - 90, textWidth + 36, 58, new Color(0, 0, 0, 180));
+        Raylib.DrawText(message, centerX - textWidth / 2, centerY - 78, fontSize, color);
     }
 
     private static void RenderHitMarker(int centerX, int centerY)

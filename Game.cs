@@ -3,6 +3,13 @@ using Raylib_cs;
 
 namespace RaylibHaloClone;
 
+public enum MatchState
+{
+    Playing,
+    Victory,
+    Defeated
+}
+
 public sealed class Game : IDisposable
 {
     private const int ScreenWidth = 1280;
@@ -18,6 +25,7 @@ public sealed class Game : IDisposable
     private readonly WeaponViewModel weaponViewModel;
     private float accumulator;
     private bool disposed;
+    private MatchState matchState = MatchState.Playing;
 
     public Game()
     {
@@ -38,31 +46,71 @@ public sealed class Game : IDisposable
         while (!Raylib.WindowShouldClose())
         {
             float frameTime = MathF.Min(Raylib.GetFrameTime(), MaxFrameTime);
-            accumulator += frameTime;
 
-            player.UpdateLook(Raylib.GetMouseDelta());
-            CombatUpdateResult combatResult = player.UpdateCombat(enemies, frameTime);
-            hud.UpdateHitMarker(combatResult.Hit, frameTime);
-            weaponViewModel.Update(player.MovementBobSpeed, frameTime);
-
-            if (combatResult.Fired)
+            if (matchState == MatchState.Playing)
             {
-                weaponViewModel.AddRecoil();
+                UpdatePlaying(frameTime);
             }
-
-            foreach (Enemy enemy in enemies)
+            else if (Raylib.IsKeyPressed(KeyboardKey.Enter))
             {
-                enemy.Update(frameTime);
-            }
-
-            while (accumulator >= FixedTimeStep)
-            {
-                player.FixedUpdate(level, FixedTimeStep);
-                accumulator -= FixedTimeStep;
+                ResetLevel();
             }
 
             Render();
         }
+    }
+
+    private void UpdatePlaying(float frameTime)
+    {
+        accumulator += frameTime;
+
+        player.UpdateLook(Raylib.GetMouseDelta());
+        player.UpdateShieldRecharge(frameTime);
+        CombatUpdateResult combatResult = player.UpdateCombat(enemies, frameTime);
+        hud.UpdateHitMarker(combatResult.Hit, frameTime);
+        weaponViewModel.Update(player.MovementBobSpeed, frameTime);
+
+        if (combatResult.Fired)
+        {
+            weaponViewModel.AddRecoil();
+        }
+
+        foreach (Enemy enemy in enemies)
+        {
+            enemy.Update(player, level, frameTime);
+        }
+
+        while (accumulator >= FixedTimeStep)
+        {
+            player.FixedUpdate(level, FixedTimeStep);
+            accumulator -= FixedTimeStep;
+        }
+
+        UpdateMatchState();
+    }
+
+    private void UpdateMatchState()
+    {
+        if (!player.IsAlive)
+        {
+            matchState = MatchState.Defeated;
+            return;
+        }
+
+        if (enemies.All(enemy => !enemy.IsAlive))
+        {
+            matchState = MatchState.Victory;
+        }
+    }
+
+    private void ResetLevel()
+    {
+        player.Reset(level.PlayerSpawnPosition);
+        enemies.Clear();
+        enemies.AddRange(CreateTestEnemies());
+        hud.Reset();
+        accumulator = 0f;
+        matchState = MatchState.Playing;
     }
 
     private void Render()
@@ -79,7 +127,7 @@ public sealed class Game : IDisposable
         Raylib.EndMode3D();
 
         weaponViewModel.Render();
-        hud.Render(player, enemies.Count(enemy => enemy.IsAlive));
+        hud.Render(player, enemies.Count(enemy => enemy.IsAlive), matchState);
         Raylib.EndDrawing();
     }
 
