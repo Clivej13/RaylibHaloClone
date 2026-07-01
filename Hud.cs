@@ -6,7 +6,7 @@ public sealed class Hud
 {
     private const int Padding = 16;
 
-    public void Render(Player player)
+    public void Render(Player player, int livingEnemies)
     {
         int screenWidth = Raylib.GetScreenWidth();
         int screenHeight = Raylib.GetScreenHeight();
@@ -21,6 +21,8 @@ public sealed class Hud
         Raylib.DrawFPS(Padding, Padding);
         Raylib.DrawText($"Position: {player.Position.X,6:0.00}, {player.Position.Y,5:0.00}, {player.Position.Z,6:0.00}", Padding, Padding + 32, 20, Color.RayWhite);
         Raylib.DrawText($"Speed: {player.CurrentHorizontalSpeed:0.00} m/s", Padding, Padding + 58, 20, Color.RayWhite);
-        Raylib.DrawText("WASD Move | Shift Sprint | Space Jump | Mouse Look", Padding, screenHeight - 34, 20, Color.LightGray);
+        Raylib.DrawText($"Weapon: {player.CurrentWeapon.Name}", Padding, Padding + 84, 20, Color.RayWhite);
+        Raylib.DrawText($"Targets: {livingEnemies}", Padding, Padding + 110, 20, Color.RayWhite);
+        Raylib.DrawText("WASD Move | Shift Sprint | Space Jump | Mouse Look | LMB Fire", Padding, screenHeight - 34, 20, Color.LightGray);
     }
 }

@@ -14,6 +14,7 @@ public sealed class Game : IDisposable
     private readonly Level level;
     private readonly Player player;
     private readonly Hud hud;
+    private readonly List<Enemy> enemies;
     private float accumulator;
     private bool disposed;
 
@@ -27,6 +28,7 @@ public sealed class Game : IDisposable
         level = new Level();
         player = new Player(level.PlayerSpawnPosition);
         hud = new Hud();
+        enemies = CreateTestEnemies();
     }
 
     public void Run()
@@ -37,6 +39,7 @@ public sealed class Game : IDisposable
             accumulator += frameTime;
 
             player.UpdateLook(Raylib.GetMouseDelta());
+            player.UpdateCombat(enemies, frameTime);
 
             while (accumulator >= FixedTimeStep)
             {
@@ -55,11 +58,24 @@ public sealed class Game : IDisposable
 
         Raylib.BeginMode3D(player.Camera);
         level.Render();
+        foreach (Enemy enemy in enemies)
+        {
+            enemy.Render();
+        }
         Raylib.EndMode3D();
 
-        hud.Render(player);
+        hud.Render(player, enemies.Count(enemy => enemy.IsAlive));
         Raylib.EndDrawing();
     }
+
+    private static List<Enemy> CreateTestEnemies() =>
+    [
+        new Enemy(new Vector3(-6f, 0f, -8f)),
+        new Enemy(new Vector3(0f, 0f, -12f)),
+        new Enemy(new Vector3(6f, 0f, -8f)),
+        new Enemy(new Vector3(-10f, 0f, 2f)),
+        new Enemy(new Vector3(10f, 0f, 2f))
+    ];
 
     public void Dispose()
     {

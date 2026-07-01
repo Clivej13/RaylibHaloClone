@@ -35,6 +35,9 @@ public sealed class Player
 
     public Camera3D Camera { get; private set; }
     public Vector3 Position => position;
+    public Vector3 LookDirection => Forward;
+    public Vector3 CameraPosition => GetCameraPosition();
+    public Weapon CurrentWeapon { get; } = Weapon.CreateRifle();
     public float CurrentHorizontalSpeed => MathUtils.Flatten(velocity).Length();
 
     private Vector3 Forward
@@ -66,6 +69,16 @@ public sealed class Player
         yaw -= mouseDelta.X * MouseSensitivity;
         pitch = MathUtils.Clamp(pitch - mouseDelta.Y * MouseSensitivity, -MaxLookPitch, MaxLookPitch);
         UpdateCamera();
+    }
+
+    public void UpdateCombat(IReadOnlyList<Enemy> enemies, float deltaTime)
+    {
+        CurrentWeapon.Update(deltaTime);
+
+        if (Raylib.IsMouseButtonDown(MouseButton.Left))
+        {
+            CurrentWeapon.Fire(CameraPosition, LookDirection, enemies);
+        }
     }
 
     public void FixedUpdate(Level level, float deltaTime)
