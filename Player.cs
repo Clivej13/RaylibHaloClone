@@ -21,16 +21,25 @@ public sealed class Player
     private const float Gravity = 22f;
     private const float MaxLookPitch = 88f;
     private const float MouseSensitivity = 0.10f;
+    private const float MaxHealth = 100f;
+    private const float MaxShield = 100f;
+    private const float ShieldRechargeDelay = 5f;
+    private const float ShieldRechargeRate = 28f;
+
 
     private Vector3 position;
     private Vector3 velocity;
     private float yaw;
     private float pitch;
     private bool grounded;
+    private float timeSinceDamage = ShieldRechargeDelay;
+
 
     public Player(Vector3 spawnPosition)
     {
         position = spawnPosition;
+        Health = MaxHealth;
+        Shield = MaxShield;
         Vector3 cameraPosition = GetCameraPosition();
         Camera = new Camera3D(cameraPosition, cameraPosition + Forward, Vector3.UnitY, 75f, CameraProjection.Perspective);
     }
@@ -40,6 +49,9 @@ public sealed class Player
     public Vector3 LookDirection => Forward;
     public Vector3 CameraPosition => GetCameraPosition();
     public Weapon CurrentWeapon { get; } = Weapon.CreateRifle();
+    public float Health { get; private set; }
+    public float Shield { get; private set; }
+    public bool IsAlive => Health > 0f;
     public float CurrentHorizontalSpeed => MathUtils.Flatten(velocity).Length();
     public float MovementBobSpeed => CurrentHorizontalSpeed;
 
@@ -67,6 +79,45 @@ public sealed class Player
 
     private Vector3 Right => Vector3.Normalize(Vector3.Cross(FlatForward, Vector3.UnitY));
 
+    public void ApplyDamage(float damage)
+    {
+        if (!IsAlive || damage <= 0f)
+        {
+            return;
+        }
+
+        timeSinceDamage = 0f;
+        float shieldDamage = MathF.Min(Shield, damage);
+        Shield -= shieldDamage;
+        Health = MathF.Max(0f, Health - (damage - shieldDamage));
+    }
+
+    public void UpdateShieldRecharge(float deltaTime)
+    {
+        if (!IsAlive)
+        {
+            return;
+        }
+
+        timeSinceDamage += deltaTime;
+        if (timeSinceDamage >= ShieldRechargeDelay && Shield < MaxShield)
+        {
+            Shield = MathF.Min(MaxShield, Shield + ShieldRechargeRate * deltaTime);
+        }
+    }
+
+    public void Reset(Vector3 spawnPosition)
+    {
+        position = spawnPosition;
+        velocity = Vector3.Zero;
+        grounded = false;
+        Health = MaxHealth;
+        Shield = MaxShield;
+        timeSinceDamage = ShieldRechargeDelay;
+        CurrentWeapon.Reset();
+        UpdateCamera();
+    }
+
     public void UpdateLook(Vector2 mouseDelta)
     {
         yaw -= mouseDelta.X * MouseSensitivity;
@@ -76,6 +127,11 @@ public sealed class Player
 
     public CombatUpdateResult UpdateCombat(IReadOnlyList<Enemy> enemies, float deltaTime)
     {
+        if (!IsAlive)
+        {
+            return new CombatUpdateResult(false, false);
+        }
+
         CurrentWeapon.Update(deltaTime);
 
         if (Raylib.IsKeyPressed(KeyboardKey.R))
@@ -94,6 +150,11 @@ public sealed class Player
 
     public void FixedUpdate(Level level, float deltaTime)
     {
+        if (!IsAlive)
+        {
+            return;
+        }
+
         Vector3 input = GetMovementInput();
         float targetSpeed = Raylib.IsKeyDown(KeyboardKey.LeftShift) ? SprintSpeed : WalkSpeed;
         Vector3 targetVelocity = input * targetSpeed;

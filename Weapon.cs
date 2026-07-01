@@ -7,6 +7,7 @@ public readonly record struct WeaponFireResult(bool Fired, bool Hit);
 
 public sealed class Weapon
 {
+    private readonly int startingReserveAmmo;
     private float cooldownRemaining;
     private float reloadRemaining;
 
@@ -19,6 +20,7 @@ public sealed class Weapon
         MagazineSize = magazineSize;
         MagazineAmmo = magazineSize;
         ReserveAmmo = reserveAmmo;
+        startingReserveAmmo = reserveAmmo;
         ReloadTime = reloadTime;
     }
 
@@ -34,6 +36,14 @@ public sealed class Weapon
     public bool CanFire => cooldownRemaining <= 0f && !IsReloading && MagazineAmmo > 0;
 
     public static Weapon CreateRifle() => new("MA5B Rifle", 34f, 60f, 0.1f, 32, 160, 1.4f);
+
+    public void Reset()
+    {
+        MagazineAmmo = MagazineSize;
+        ReserveAmmo = startingReserveAmmo;
+        cooldownRemaining = 0f;
+        reloadRemaining = 0f;
+    }
 
     public void Update(float deltaTime)
     {
