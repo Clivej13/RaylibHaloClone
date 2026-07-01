@@ -10,6 +10,7 @@ public sealed class Player
     private const float Radius = 0.35f;
     private const float Height = 1.9f;
     private const float GroundSnapTolerance = 0.05f;
+    private const float CollisionSkin = 0.001f;
     private const float WalkSpeed = 6f;
     private const float SprintSpeed = 10f;
     private const float Acceleration = 14f;
@@ -116,6 +117,7 @@ public sealed class Player
             return;
         }
 
+        Vector3 previousPosition = position;
         if (axis == Axis.X)
         {
             position.X += delta;
@@ -129,7 +131,7 @@ public sealed class Player
 
         foreach (BoundingBox box in level.CollisionBoxes)
         {
-            if (!Raylib.CheckCollisionBoxes(CreatePlayerBox(position), box))
+            if (!ShouldResolveHorizontalCollision(previousPosition, position, box, axis, delta))
             {
                 continue;
             }
@@ -180,6 +182,50 @@ public sealed class Player
             velocity.Y = 0f;
             grounded = true;
         }
+    }
+
+    private bool ShouldResolveHorizontalCollision(Vector3 previousPosition, Vector3 currentPosition, BoundingBox box, Axis axis, float delta)
+    {
+        if (!HasHorizontalOverlapOnOtherAxis(currentPosition, box, axis) || !HasSideVerticalOverlap(currentPosition, box))
+        {
+            return false;
+        }
+
+        return axis == Axis.X
+            ? CrossedXFace(previousPosition, currentPosition, box, delta)
+            : CrossedZFace(previousPosition, currentPosition, box, delta);
+    }
+
+    private static bool HasSideVerticalOverlap(Vector3 feetPosition, BoundingBox box)
+    {
+        float playerBottom = feetPosition.Y;
+        float playerTop = feetPosition.Y + Height;
+
+        return playerBottom < box.Max.Y - CollisionSkin && playerTop > box.Min.Y + CollisionSkin;
+    }
+
+    private static bool HasHorizontalOverlapOnOtherAxis(Vector3 feetPosition, BoundingBox box, Axis axis)
+    {
+        if (axis == Axis.X)
+        {
+            return feetPosition.Z + Radius > box.Min.Z + CollisionSkin && feetPosition.Z - Radius < box.Max.Z - CollisionSkin;
+        }
+
+        return feetPosition.X + Radius > box.Min.X + CollisionSkin && feetPosition.X - Radius < box.Max.X - CollisionSkin;
+    }
+
+    private static bool CrossedXFace(Vector3 previousPosition, Vector3 currentPosition, BoundingBox box, float delta)
+    {
+        return delta > 0f
+            ? previousPosition.X + Radius <= box.Min.X + CollisionSkin && currentPosition.X + Radius > box.Min.X
+            : previousPosition.X - Radius >= box.Max.X - CollisionSkin && currentPosition.X - Radius < box.Max.X;
+    }
+
+    private static bool CrossedZFace(Vector3 previousPosition, Vector3 currentPosition, BoundingBox box, float delta)
+    {
+        return delta > 0f
+            ? previousPosition.Z + Radius <= box.Min.Z + CollisionSkin && currentPosition.Z + Radius > box.Min.Z
+            : previousPosition.Z - Radius >= box.Max.Z - CollisionSkin && currentPosition.Z - Radius < box.Max.Z;
     }
 
     private BoundingBox CreatePlayerBox(Vector3 feetPosition)
