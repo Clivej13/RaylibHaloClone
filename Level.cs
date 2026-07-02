@@ -8,7 +8,8 @@ public enum SwitchType
     ExitActivation,
     DoorOpen,
     PoweredDoor,
-    Lights
+    Lights,
+    BoardingPodDoor
 }
 
 public enum SwitchState
@@ -72,6 +73,7 @@ public sealed class InteractableSwitch : IInteractable
         SwitchType.DoorOpen => "security door switch",
         SwitchType.PoweredDoor => "powered door switch",
         SwitchType.Lights => "light switch",
+        SwitchType.BoardingPodDoor => "boarding pod door switch",
         _ => "switch"
     };
     public bool IsActive => CanUse;
@@ -121,6 +123,8 @@ public sealed class BoardingPodModule
         SpawnLookDirection = ExitDirection;
         SwitchFaceDirection = TransformDirection(-Vector3.UnitX);
         SwitchPosition = TransformPoint(new Vector3(Width / 2f - WallThickness - SwitchInset, 1.15f, -0.85f));
+        DoorPosition = TransformPoint(new Vector3(0f, 1.4f, Depth / 2f - WallThickness / 2f));
+        DoorSize = TransformSize(new Vector3(DoorWidth, 2.8f, WallThickness));
         BuildGeometry();
     }
 
@@ -131,6 +135,8 @@ public sealed class BoardingPodModule
     public Vector3 ExitDirection { get; }
     public Vector3 SwitchPosition { get; }
     public Vector3 SwitchFaceDirection { get; }
+    public Vector3 DoorPosition { get; }
+    public Vector3 DoorSize { get; }
     public Vector3 SwitchSize => TransformSize(new Vector3(0.35f, 0.8f, 0.65f));
     public IEnumerable<BoundingBox> CollisionBoxes => solids.Select(solid => Level.ToBoundingBox(solid.Position, solid.Size));
 
@@ -290,6 +296,9 @@ public sealed class Level
             case SwitchType.Lights:
                 LightsOn = true;
                 break;
+            case SwitchType.BoardingPodDoor:
+                doors[2].Open();
+                break;
         }
     }
 
@@ -366,8 +375,9 @@ public sealed class Level
     {
         doors.Add(new Door("Security Door", new Vector3(-8f, 1.25f, -2f), new Vector3(4f, 2.5f, 0.45f), new Color(120, 76, 58, 255), new Color(72, 130, 84, 130)));
         doors.Add(new Door("Powered Door", new Vector3(8f, 1.25f, -2f), new Vector3(4f, 2.5f, 0.45f), new Color(92, 54, 54, 255), new Color(72, 130, 190, 130)));
+        doors.Add(new Door("Boarding Pod Door", boardingPod.DoorPosition, boardingPod.DoorSize, new Color(84, 112, 132, 255), new Color(72, 170, 190, 130)));
 
-        switches.Add(new InteractableSwitch(SwitchType.Lights, boardingPod.SwitchPosition, boardingPod.SwitchSize, boardingPod.SwitchFaceDirection));
+        switches.Add(new InteractableSwitch(SwitchType.BoardingPodDoor, boardingPod.SwitchPosition, boardingPod.SwitchSize, boardingPod.SwitchFaceDirection));
         switches.Add(new InteractableSwitch(SwitchType.Lights, new Vector3(-15f, 0.55f, 8f), new Vector3(0.8f, 1.1f, 0.45f)));
         switches.Add(new InteractableSwitch(SwitchType.DoorOpen, new Vector3(-11f, 0.55f, -2f), new Vector3(0.8f, 1.1f, 0.45f)));
         switches.Add(new InteractableSwitch(SwitchType.PoweredDoor, new Vector3(11f, 0.55f, -2f), new Vector3(0.8f, 1.1f, 0.45f)));

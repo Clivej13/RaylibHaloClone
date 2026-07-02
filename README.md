@@ -51,7 +51,7 @@ dotnet run -c Debug
 - **Enemy AI and combat**: enemies detect the player, move, strafe, check line of sight, aim, attack, take damage, and flash when hit.
 - **HUD**: crosshair, FPS/debug info, position/speed, objective text, enemy count, shield/health bars, weapon/ammo panel, reload status, hit marker, damage overlays, interaction prompts, and victory/defeat messaging.
 - **Objectives**: eliminate all targets, activate the extraction switch, then move into the extraction zone.
-- **Switches, doors, and lights**: light switch, boarding pod wall switch, security door switch, powered door switch, extraction switch, doors, lights, and light fixtures are all represented in the level.
+- **Switches, doors, and lights**: light switch, boarding pod door switch, security door switch, powered door switch, extraction switch, doors, lights, and light fixtures are all represented in the level.
 - **Extraction, victory, defeat, and reset**: reaching the active extraction zone after completing objectives triggers victory; death triggers defeat; Enter resets the level.
 - **Interactable pickup system**: switches, pickups, and dropped objects use a shared interactable model with position, bounds, display text, active/consumed state, rendering, and interaction behavior.
 - **Crosshair interactions**: interactions are selected by camera position and look direction, require the object to be under the crosshair, and use a short activation distance.
@@ -79,7 +79,7 @@ The default mission loadout is an **MA5B Rifle** in Primary, an empty Secondary 
 
 ## Level Modules
 
-- The first reusable boarding pod module has been added in one arena corner. It is built from simple cube geometry, includes an aligned floor, roof, walls, exit opening, side-wall switch, and player spawn facing the exit, and is placed without replacing the current arena or objectives.
+- The first reusable boarding pod module has been added in one arena corner. It is built from simple cube geometry, includes an aligned floor, roof, walls, exit opening, side-wall switch that opens its closed exit door, and player spawn facing the exit, and is placed without replacing the current arena or objectives.
 
 ## Gameplay Loop
 
