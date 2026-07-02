@@ -9,7 +9,8 @@ public enum SwitchType
     DoorOpen,
     PoweredDoor,
     Lights,
-    BoardingPodDoor
+    BoardingPodDoor,
+    LinkedDoor
 }
 
 public enum SwitchState
@@ -52,18 +53,20 @@ public sealed class Door
 
 public sealed class InteractableSwitch : IInteractable
 {
-    public InteractableSwitch(SwitchType type, Vector3 position, Vector3 size, Vector3? faceDirection = null)
+    public InteractableSwitch(SwitchType type, Vector3 position, Vector3 size, Vector3? faceDirection = null, string? targetDoorName = null)
     {
         Type = type;
         Position = position;
         Size = size;
         FaceDirection = MathUtils.SafeNormalize(faceDirection ?? -Vector3.UnitZ, -Vector3.UnitZ);
+        TargetDoorName = targetDoorName;
     }
 
     public SwitchType Type { get; }
     public Vector3 Position { get; }
     public Vector3 Size { get; }
     public Vector3 FaceDirection { get; }
+    public string? TargetDoorName { get; }
     public SwitchState State { get; private set; } = SwitchState.Off;
     public bool CanUse => State == SwitchState.Off;
     public float Radius => MathF.Max(Size.X, MathF.Max(Size.Y, Size.Z)) * 0.5f;
@@ -74,6 +77,7 @@ public sealed class InteractableSwitch : IInteractable
         SwitchType.PoweredDoor => "powered door switch",
         SwitchType.Lights => "light switch",
         SwitchType.BoardingPodDoor => "boarding pod door switch",
+        SwitchType.LinkedDoor => TargetDoorName is null ? "door switch" : $"{TargetDoorName} switch",
         _ => "switch"
     };
     public bool IsActive => CanUse;
@@ -194,6 +198,184 @@ public sealed class BoardingPodModule
     private void AddDetail(Vector3 localPosition, Vector3 localSize) => detailCubes.Add((TransformPoint(localPosition), TransformSize(localSize)));
 }
 
+
+public sealed class PerimeterCorridorModule
+{
+    private const float Length = 12f;
+    private const float Width = 4.5f;
+    private const float Height = 3.2f;
+    private const float WallThickness = 0.35f;
+    private const float FloorThickness = 0.1f;
+    private const float DoorWidth = 2.2f;
+    private const float DoorHeight = 2.7f;
+    private const float SwitchInset = 0.08f;
+    private const float SwitchHeight = 1.15f;
+    private const float DefaultSideDoorSpacing = 3f;
+    private const float DefaultStartSideDoorMargin = 3f;
+    private const float DefaultEndSideDoorMargin = 3f;
+
+    private readonly List<(Vector3 Position, Vector3 Size)> solids = new();
+    private readonly List<(Vector3 Position, Vector3 Size)> detailCubes = new();
+    private readonly List<Door> doors = new();
+    private readonly List<InteractableSwitch> switches = new();
+
+    public PerimeterCorridorModule(
+        Vector3 origin,
+        ModuleFacing facing,
+        int sideDoorCount,
+        bool hasBreachGap,
+        float sideDoorSpacing = DefaultSideDoorSpacing,
+        float startSideDoorMargin = DefaultStartSideDoorMargin,
+        float endSideDoorMargin = DefaultEndSideDoorMargin)
+    {
+        Origin = origin;
+        Facing = facing;
+        SideDoorCount = Math.Max(0, sideDoorCount);
+        HasBreachGap = hasBreachGap;
+        SideDoorSpacing = sideDoorSpacing;
+        StartSideDoorMargin = startSideDoorMargin;
+        EndSideDoorMargin = endSideDoorMargin;
+        BuildGeometry();
+    }
+
+    public Vector3 Origin { get; }
+    public ModuleFacing Facing { get; }
+    public int SideDoorCount { get; }
+    public bool HasBreachGap { get; }
+    public float SideDoorSpacing { get; }
+    public float StartSideDoorMargin { get; }
+    public float EndSideDoorMargin { get; }
+    public IEnumerable<BoundingBox> CollisionBoxes => solids.Select(solid => Level.ToBoundingBox(solid.Position, solid.Size));
+    public IReadOnlyList<Door> Doors => doors;
+    public IReadOnlyList<InteractableSwitch> Switches => switches;
+
+    public Vector3 TransformPoint(Vector3 local) => Origin + TransformDirection(local);
+
+    public Vector3 TransformDirection(Vector3 local)
+    {
+        return Facing switch
+        {
+            ModuleFacing.North => local,
+            ModuleFacing.East => new Vector3(local.Z, local.Y, -local.X),
+            ModuleFacing.South => new Vector3(-local.X, local.Y, -local.Z),
+            ModuleFacing.West => new Vector3(-local.Z, local.Y, local.X),
+            _ => local
+        };
+    }
+
+    public Vector3 TransformSize(Vector3 localSize)
+    {
+        return Facing is ModuleFacing.East or ModuleFacing.West
+            ? new Vector3(localSize.Z, localSize.Y, localSize.X)
+            : localSize;
+    }
+
+    public void Render(Color wallColor, Color floorColor)
+    {
+        foreach (var cube in detailCubes)
+        {
+            Raylib.DrawCubeV(cube.Position, cube.Size, floorColor);
+            Raylib.DrawCubeWiresV(cube.Position, cube.Size, Color.DarkGray);
+        }
+
+        foreach (var solid in solids)
+        {
+            Raylib.DrawCubeV(solid.Position, solid.Size, wallColor);
+            Raylib.DrawCubeWiresV(solid.Position, solid.Size, Color.Black);
+        }
+    }
+
+    private void BuildGeometry()
+    {
+        AddDetail(new Vector3(0f, -FloorThickness / 2f, 0f), new Vector3(Length, FloorThickness, Width));
+        AddSolid(new Vector3(0f, Height + WallThickness / 2f, 0f), new Vector3(Length, WallThickness, Width));
+        AddWallWithOpenings(-Width / 2f + WallThickness / 2f, HasBreachGap ? new[] { 0f } : Array.Empty<float>());
+
+        float[] sideDoorCenters = CalculateSideDoorCenters();
+        AddWallWithOpenings(Width / 2f - WallThickness / 2f, sideDoorCenters);
+
+        AddEndWall(-Length / 2f + WallThickness / 2f, "West End Door", 1f);
+        AddEndWall(Length / 2f - WallThickness / 2f, "East End Door", -1f);
+
+        for (int i = 0; i < sideDoorCenters.Length; i++)
+        {
+            string name = $"Perimeter Side Door {i + 1}";
+            Vector3 doorPosition = TransformPoint(new Vector3(sideDoorCenters[i], DoorHeight / 2f, Width / 2f - WallThickness / 2f));
+            Vector3 doorSize = TransformSize(new Vector3(DoorWidth, DoorHeight, WallThickness));
+            AddDoorAndSwitch(name, doorPosition, doorSize,
+                new Vector3(sideDoorCenters[i] - DoorWidth / 2f - 0.45f, SwitchHeight, Width / 2f - WallThickness - SwitchInset),
+                new Vector3(0.35f, 0.8f, 0.65f), -Vector3.UnitZ);
+        }
+    }
+
+    private float[] CalculateSideDoorCenters()
+    {
+        if (SideDoorCount == 0)
+        {
+            return Array.Empty<float>();
+        }
+
+        if (StartSideDoorMargin < DoorWidth / 2f || EndSideDoorMargin < DoorWidth / 2f)
+        {
+            throw new InvalidOperationException("Perimeter corridor side door margins must leave enough wall length for the side door openings.");
+        }
+
+        if (SideDoorCount > 1 && SideDoorSpacing < DoorWidth)
+        {
+            throw new InvalidOperationException("Perimeter corridor side door spacing must be at least one side door width to avoid overlapping side doors.");
+        }
+
+        float requiredLength = StartSideDoorMargin + EndSideDoorMargin + SideDoorSpacing * (SideDoorCount - 1);
+        if (requiredLength > Length)
+        {
+            throw new InvalidOperationException($"Perimeter corridor side door layout requires {requiredLength:0.##}m, but the corridor length is {Length:0.##}m.");
+        }
+
+        return Enumerable.Range(0, SideDoorCount)
+            .Select(i => -Length / 2f + StartSideDoorMargin + SideDoorSpacing * i)
+            .ToArray();
+    }
+
+    private void AddWallWithOpenings(float localZ, IReadOnlyList<float> openingCenters)
+    {
+        float cursor = -Length / 2f;
+        foreach (float center in openingCenters.OrderBy(x => x))
+        {
+            AddWallSegment(cursor, center - DoorWidth / 2f, localZ);
+            cursor = center + DoorWidth / 2f;
+        }
+        AddWallSegment(cursor, Length / 2f, localZ);
+    }
+
+    private void AddWallSegment(float startX, float endX, float localZ)
+    {
+        float segmentLength = endX - startX;
+        if (segmentLength <= 0.05f) return;
+        AddSolid(new Vector3(startX + segmentLength / 2f, Height / 2f, localZ), new Vector3(segmentLength, Height, WallThickness));
+    }
+
+    private void AddEndWall(float localX, string doorName, float switchSide)
+    {
+        float sideSegmentWidth = (Width - DoorWidth) / 2f;
+        AddSolid(new Vector3(localX, Height / 2f, -Width / 2f + sideSegmentWidth / 2f), new Vector3(WallThickness, Height, sideSegmentWidth));
+        AddSolid(new Vector3(localX, Height / 2f, Width / 2f - sideSegmentWidth / 2f), new Vector3(WallThickness, Height, sideSegmentWidth));
+        Vector3 doorPosition = TransformPoint(new Vector3(localX, DoorHeight / 2f, 0f));
+        Vector3 doorSize = TransformSize(new Vector3(WallThickness, DoorHeight, DoorWidth));
+        AddDoorAndSwitch(doorName, doorPosition, doorSize,
+            new Vector3(localX + switchSide * (WallThickness + SwitchInset), SwitchHeight, -DoorWidth / 2f - 0.45f),
+            new Vector3(0.65f, 0.8f, 0.35f), Vector3.UnitZ);
+    }
+
+    private void AddDoorAndSwitch(string name, Vector3 doorPosition, Vector3 doorSize, Vector3 localSwitchPosition, Vector3 localSwitchSize, Vector3 localSwitchFaceDirection)
+    {
+        doors.Add(new Door(name, doorPosition, doorSize, new Color(84, 92, 112, 255), new Color(72, 150, 190, 130)));
+        switches.Add(new InteractableSwitch(SwitchType.LinkedDoor, TransformPoint(localSwitchPosition), TransformSize(localSwitchSize), TransformDirection(localSwitchFaceDirection), name));
+    }
+
+    private void AddSolid(Vector3 localPosition, Vector3 localSize) => solids.Add((TransformPoint(localPosition), TransformSize(localSize)));
+    private void AddDetail(Vector3 localPosition, Vector3 localSize) => detailCubes.Add((TransformPoint(localPosition), TransformSize(localSize)));
+}
+
 public sealed class Level
 {
     public const float ArenaHalfSize = 24f;
@@ -255,10 +437,12 @@ public sealed class Level
     private readonly List<WorldInteractable> worldObjects = new();
     private readonly List<Vector3> lightFixtures = new();
     private readonly BoardingPodModule boardingPod;
+    private readonly PerimeterCorridorModule perimeterCorridor;
 
     public Level()
     {
         boardingPod = new BoardingPodModule(new Vector3(-18f, 0f, -18f), ModuleFacing.North);
+        perimeterCorridor = new PerimeterCorridorModule(new Vector3(-18f, 0f, -13.25f), ModuleFacing.North, sideDoorCount: 3, hasBreachGap: true);
         PlayerSpawnPosition = boardingPod.SpawnPosition;
         PlayerSpawnLookDirection = boardingPod.SpawnLookDirection;
 
@@ -269,6 +453,7 @@ public sealed class Level
 
         BuildPlatformingRoute();
         foreach (BoundingBox box in boardingPod.CollisionBoxes) collisionBoxes.Add(box);
+        foreach (BoundingBox box in perimeterCorridor.CollisionBoxes) collisionBoxes.Add(box);
         BuildInteractiveObjects();
     }
 
@@ -297,7 +482,13 @@ public sealed class Level
                 LightsOn = true;
                 break;
             case SwitchType.BoardingPodDoor:
-                doors[2].Open();
+                doors.FirstOrDefault(door => door.Name == "Boarding Pod Door")?.Open();
+                break;
+            case SwitchType.LinkedDoor:
+                if (interactableSwitch.TargetDoorName is not null)
+                {
+                    doors.FirstOrDefault(door => door.Name == interactableSwitch.TargetDoorName)?.Open();
+                }
                 break;
         }
     }
@@ -322,6 +513,7 @@ public sealed class Level
         RenderSpawnPoint();
         RenderExitZone(exitActive);
         boardingPod.Render(wallColor, floorColor);
+        perimeterCorridor.Render(wallColor, floorColor);
 
         foreach (var wall in walls)
         {
@@ -376,8 +568,10 @@ public sealed class Level
         doors.Add(new Door("Security Door", new Vector3(-8f, 1.25f, -2f), new Vector3(4f, 2.5f, 0.45f), new Color(120, 76, 58, 255), new Color(72, 130, 84, 130)));
         doors.Add(new Door("Powered Door", new Vector3(8f, 1.25f, -2f), new Vector3(4f, 2.5f, 0.45f), new Color(92, 54, 54, 255), new Color(72, 130, 190, 130)));
         doors.Add(new Door("Boarding Pod Door", boardingPod.DoorPosition, boardingPod.DoorSize, new Color(84, 112, 132, 255), new Color(72, 170, 190, 130)));
+        doors.AddRange(perimeterCorridor.Doors);
 
         switches.Add(new InteractableSwitch(SwitchType.BoardingPodDoor, boardingPod.SwitchPosition, boardingPod.SwitchSize, boardingPod.SwitchFaceDirection));
+        switches.AddRange(perimeterCorridor.Switches);
         switches.Add(new InteractableSwitch(SwitchType.Lights, new Vector3(-15f, 0.55f, 8f), new Vector3(0.8f, 1.1f, 0.45f)));
         switches.Add(new InteractableSwitch(SwitchType.DoorOpen, new Vector3(-11f, 0.55f, -2f), new Vector3(0.8f, 1.1f, 0.45f)));
         switches.Add(new InteractableSwitch(SwitchType.PoweredDoor, new Vector3(11f, 0.55f, -2f), new Vector3(0.8f, 1.1f, 0.45f)));
