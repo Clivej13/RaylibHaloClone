@@ -60,7 +60,7 @@ public sealed class Hud
         previousHealth = player.Health;
     }
 
-    public void Render(Player player, int livingEnemies, MatchState matchState, bool eliminateTargetsObjectiveComplete)
+    public void Render(Player player, int livingEnemies, MatchState matchState, string objectiveText, bool showInteractionPrompt)
     {
         int screenWidth = Raylib.GetScreenWidth();
         int screenHeight = Raylib.GetScreenHeight();
@@ -75,7 +75,7 @@ public sealed class Hud
             RenderHitMarker(centerX, centerY);
         }
 
-        RenderDebugInfo(player, livingEnemies, eliminateTargetsObjectiveComplete);
+        RenderDebugInfo(player, livingEnemies, objectiveText);
         RenderPlayerStatus(player, screenWidth);
         RenderWeaponInfo(player, screenWidth, screenHeight);
 
@@ -84,20 +84,24 @@ public sealed class Hud
             Raylib.DrawText("RELOADING", centerX - 58, centerY + 34, 22, Color.Gold);
         }
 
+        if (showInteractionPrompt && matchState == MatchState.Playing)
+        {
+            const string prompt = "Press E to activate switch";
+            int promptWidth = Raylib.MeasureText(prompt, 22);
+            Raylib.DrawText(prompt, centerX - promptWidth / 2, centerY + 62, 22, Color.Gold);
+        }
+
         if (matchState != MatchState.Playing)
         {
             RenderMatchMessage(matchState, centerX, centerY, livingEnemies);
         }
 
-        Raylib.DrawText("WASD Move | Shift Sprint | Space Jump | Mouse Look | LMB Fire | R Reload", Padding, screenHeight - 34, 20, Color.LightGray);
+        Raylib.DrawText("WASD Move | Shift Sprint | Space Jump | Mouse Look | LMB Fire | R Reload | E Interact", Padding, screenHeight - 34, 20, Color.LightGray);
     }
 
-    private static void RenderDebugInfo(Player player, int livingEnemies, bool eliminateTargetsObjectiveComplete)
+    private static void RenderDebugInfo(Player player, int livingEnemies, string objectiveText)
     {
-        string objectiveText = eliminateTargetsObjectiveComplete
-            ? "Objective complete: Proceed to extraction"
-            : "Objective: Eliminate all targets";
-        Color objectiveColor = eliminateTargetsObjectiveComplete ? Color.SkyBlue : Color.RayWhite;
+        Color objectiveColor = objectiveText.StartsWith("Objective complete", StringComparison.Ordinal) ? Color.SkyBlue : Color.RayWhite;
 
         Raylib.DrawFPS(Padding, Padding);
         Raylib.DrawText($"Position: {player.Position.X,6:0.00}, {player.Position.Y,5:0.00}, {player.Position.Z,6:0.00}", Padding, Padding + 32, 20, Color.RayWhite);
