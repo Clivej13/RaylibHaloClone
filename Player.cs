@@ -56,7 +56,7 @@ public sealed class Player
     public BoundingBox CollisionBox => CreatePlayerBox(position);
     public Vector3 LookDirection => Forward;
     public Vector3 CameraPosition => GetCameraPosition();
-    public Weapon CurrentWeapon { get; } = Weapon.CreateRifle();
+    public Weapon CurrentWeapon { get; private set; } = Weapon.CreateRifle();
     public float Health { get; private set; }
     public float Shield { get; private set; }
     public bool IsAlive => Health > 0f;
@@ -106,6 +106,31 @@ public sealed class Player
         Health = MathF.Max(0f, Health - (damage - shieldDamage));
     }
 
+    public bool Heal(float amount)
+    {
+        if (!IsAlive || amount <= 0f || Health >= MaxHealth)
+        {
+            return false;
+        }
+
+        Health = MathF.Min(MaxHealth, Health + amount);
+        return true;
+    }
+
+    public Weapon ExchangeWeapon(Weapon newWeapon)
+    {
+        Weapon previousWeapon = CurrentWeapon;
+        CurrentWeapon = newWeapon;
+        return previousWeapon;
+    }
+
+    public Weapon DropCurrentWeapon()
+    {
+        Weapon droppedWeapon = CurrentWeapon;
+        CurrentWeapon = Weapon.CreateRifle();
+        return droppedWeapon;
+    }
+
     public void UpdateShieldRecharge(float deltaTime)
     {
         if (!IsAlive)
@@ -128,7 +153,7 @@ public sealed class Player
         Health = MaxHealth;
         Shield = MaxShield;
         timeSinceDamage = ShieldRechargeDelay;
-        CurrentWeapon.Reset();
+        CurrentWeapon = Weapon.CreateRifle();
         weaponTracerRemaining = 0f;
         muzzleFlashRemaining = 0f;
         UpdateCamera();

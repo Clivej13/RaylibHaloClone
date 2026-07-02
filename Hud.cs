@@ -60,7 +60,7 @@ public sealed class Hud
         previousHealth = player.Health;
     }
 
-    public void Render(Player player, int livingEnemies, MatchState matchState, string objectiveText, bool showInteractionPrompt)
+    public void Render(Player player, int livingEnemies, MatchState matchState, string objectiveText, string? interactionPrompt)
     {
         int screenWidth = Raylib.GetScreenWidth();
         int screenHeight = Raylib.GetScreenHeight();
@@ -84,11 +84,10 @@ public sealed class Hud
             Raylib.DrawText("RELOADING", centerX - 58, centerY + 34, 22, Color.Gold);
         }
 
-        if (showInteractionPrompt && matchState == MatchState.Playing)
+        if (!string.IsNullOrWhiteSpace(interactionPrompt) && matchState == MatchState.Playing)
         {
-            const string prompt = "Press E to activate switch";
-            int promptWidth = Raylib.MeasureText(prompt, 22);
-            Raylib.DrawText(prompt, centerX - promptWidth / 2, centerY + 62, 22, Color.Gold);
+            int promptWidth = Raylib.MeasureText(interactionPrompt, 22);
+            Raylib.DrawText(interactionPrompt, centerX - promptWidth / 2, centerY + 62, 22, Color.Gold);
         }
 
         if (matchState != MatchState.Playing)
@@ -96,7 +95,7 @@ public sealed class Hud
             RenderMatchMessage(matchState, centerX, centerY, livingEnemies);
         }
 
-        Raylib.DrawText("WASD Move | Shift Sprint | Space Jump | Mouse Look | LMB Fire | R Reload | E Interact", Padding, screenHeight - 34, 20, Color.LightGray);
+        Raylib.DrawText("WASD Move | Shift Sprint | Space Jump | Mouse Look | LMB Fire | R Reload | E Interact | G Drop", Padding, screenHeight - 34, 20, Color.LightGray);
     }
 
     private static void RenderDebugInfo(Player player, int livingEnemies, string objectiveText)
