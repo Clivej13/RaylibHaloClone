@@ -49,6 +49,7 @@ public sealed class Player
         Shield = MaxShield;
         Vector3 cameraPosition = GetCameraPosition();
         Camera = new Camera3D(cameraPosition, cameraPosition + Forward, Vector3.UnitY, 75f, CameraProjection.Perspective);
+        Equipment.ResetToDefaultMissionLoadout();
     }
 
     public Camera3D Camera { get; private set; }
@@ -56,7 +57,9 @@ public sealed class Player
     public BoundingBox CollisionBox => CreatePlayerBox(position);
     public Vector3 LookDirection => Forward;
     public Vector3 CameraPosition => GetCameraPosition();
-    public Weapon CurrentWeapon { get; private set; } = Weapon.CreateRifle();
+    public Equipment Equipment { get; } = new();
+    public Weapon? CurrentWeapon => Equipment.CurrentWeapon;
+    public EquippedSlot EquippedSlot => Equipment.EquippedSlot;
     public float Health { get; private set; }
     public float Shield { get; private set; }
     public bool IsAlive => Health > 0f;
@@ -117,18 +120,38 @@ public sealed class Player
         return true;
     }
 
-    public Weapon ExchangeWeapon(Weapon newWeapon)
+    public Weapon? PickUpWeapon(Weapon newWeapon)
     {
-        Weapon previousWeapon = CurrentWeapon;
-        CurrentWeapon = newWeapon;
-        return previousWeapon;
+        if (Equipment.PrimaryWeapon is null)
+        {
+            Equipment.PrimaryWeapon = newWeapon;
+            Equipment.EquipSlot(EquippedSlot.Primary);
+            return null;
+        }
+
+        if (Equipment.SecondaryWeapon is null)
+        {
+            Equipment.SecondaryWeapon = newWeapon;
+            Equipment.EquipSlot(EquippedSlot.Secondary);
+            return null;
+        }
+
+        EquippedSlot swapSlot = Equipment.EquippedSlot == EquippedSlot.Sidearm
+            ? EquippedSlot.Primary
+            : Equipment.EquippedSlot;
+        Equipment.EquipSlot(swapSlot);
+        Weapon? swappedWeapon = Equipment.SetWeapon(swapSlot, newWeapon);
+        return swappedWeapon;
     }
 
-    public Weapon DropCurrentWeapon()
+    public Weapon? DropCurrentWeapon()
     {
-        Weapon droppedWeapon = CurrentWeapon;
-        CurrentWeapon = Weapon.CreateRifle();
-        return droppedWeapon;
+        return Equipment.RemoveCurrentWeapon();
+    }
+
+    public void EquipSlot(EquippedSlot slot)
+    {
+        Equipment.EquipSlot(slot);
     }
 
     public void UpdateShieldRecharge(float deltaTime)
@@ -153,7 +176,10 @@ public sealed class Player
         Health = MaxHealth;
         Shield = MaxShield;
         timeSinceDamage = ShieldRechargeDelay;
-        CurrentWeapon = Weapon.CreateRifle();
+        // Reset/restarters restore the default mission loadout. This intentionally recreates
+        // the starting MA5B Rifle only at level reset, not every frame/update, so dropping
+        // the rifle during play leaves the player unarmed until another weapon is picked up.
+        Equipment.ResetToDefaultMissionLoadout();
         weaponTracerRemaining = 0f;
         muzzleFlashRemaining = 0f;
         UpdateCamera();
@@ -173,22 +199,27 @@ public sealed class Player
             return new CombatUpdateResult(false, false);
         }
 
-        CurrentWeapon.Update(deltaTime);
+        CurrentWeapon?.Update(deltaTime);
         weaponTracerRemaining = MathF.Max(0f, weaponTracerRemaining - deltaTime);
         muzzleFlashRemaining = MathF.Max(0f, muzzleFlashRemaining - deltaTime);
 
+        if (Raylib.IsKeyPressed(KeyboardKey.One)) Equipment.EquipSlot(EquippedSlot.Primary);
+        if (Raylib.IsKeyPressed(KeyboardKey.Two)) Equipment.EquipSlot(EquippedSlot.Secondary);
+        if (Raylib.IsKeyPressed(KeyboardKey.Three)) Equipment.EquipSlot(EquippedSlot.Sidearm);
+
+        Weapon? currentWeapon = CurrentWeapon;
         if (Raylib.IsKeyPressed(KeyboardKey.R))
         {
-            CurrentWeapon.Reload();
+            currentWeapon?.Reload();
         }
 
-        if (!Raylib.IsMouseButtonDown(MouseButton.Left))
+        if (currentWeapon is null || !Raylib.IsMouseButtonDown(MouseButton.Left))
         {
             return new CombatUpdateResult(false, false);
         }
 
         Vector3 traceStart = CameraPosition + LookDirection * 0.45f - Vector3.UnitY * 0.12f;
-        WeaponFireResult fireResult = CurrentWeapon.Fire(CameraPosition, LookDirection, enemies);
+        WeaponFireResult fireResult = currentWeapon.Fire(CameraPosition, LookDirection, enemies);
         if (fireResult.Fired)
         {
             lastWeaponTraceStart = traceStart;

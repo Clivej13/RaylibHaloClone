@@ -84,7 +84,7 @@ public sealed class WeaponPickup : WorldInteractable
     public override void Interact(Player player, Level level)
     {
         if (!CanInteract(player)) return;
-        Weapon dropped = player.ExchangeWeapon(Weapon);
+        Weapon? dropped = player.PickUpWeapon(Weapon);
         IsActive = false;
         level.DropWeapon(player, dropped);
     }

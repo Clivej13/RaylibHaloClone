@@ -265,8 +265,13 @@ public sealed class Level
     }
 
 
-    public void DropWeapon(Player player, Weapon weapon)
+    public void DropWeapon(Player player, Weapon? weapon)
     {
+        if (weapon is null)
+        {
+            return;
+        }
+
         Vector3 flatLook = MathUtils.Flatten(player.LookDirection);
         if (flatLook.LengthSquared() < 0.001f) flatLook = Vector3.UnitZ;
         Vector3 preferred = player.Position + Vector3.Normalize(flatLook) * 1.35f + new Vector3(0f, 0.35f, 0f);

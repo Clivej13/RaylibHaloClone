@@ -79,7 +79,7 @@ public sealed class Hud
         RenderPlayerStatus(player, screenWidth);
         RenderWeaponInfo(player, screenWidth, screenHeight);
 
-        if (player.CurrentWeapon.IsReloading && matchState == MatchState.Playing)
+        if (player.CurrentWeapon?.IsReloading == true && matchState == MatchState.Playing)
         {
             Raylib.DrawText("RELOADING", centerX - 58, centerY + 34, 22, Color.Gold);
         }
@@ -95,7 +95,7 @@ public sealed class Hud
             RenderMatchMessage(matchState, centerX, centerY, livingEnemies);
         }
 
-        Raylib.DrawText("WASD Move | Shift Sprint | Space Jump | Mouse Look | LMB Fire | R Reload | E Interact | G Drop", Padding, screenHeight - 34, 20, Color.LightGray);
+        Raylib.DrawText("WASD Move | Shift Sprint | Space Jump | Mouse Look | LMB Fire | R Reload | 1/2/3 Switch | E Interact | G Drop", Padding, screenHeight - 34, 20, Color.LightGray);
     }
 
     private static void RenderDebugInfo(Player player, int livingEnemies, string objectiveText)
@@ -127,13 +127,19 @@ public sealed class Hud
         int panelHeight = lineHeight * 4;
         int x = screenWidth - panelWidth - Padding;
         int y = screenHeight - panelHeight - Padding - 26;
-        Weapon weapon = player.CurrentWeapon;
-        string reloadState = weapon.IsReloading ? "Reload: RELOADING" : "Reload: READY";
+        Weapon? weapon = player.CurrentWeapon;
 
-        Raylib.DrawText($"Weapon: {weapon.Name}", x, y, fontSize, Color.RayWhite);
-        Raylib.DrawText($"Magazine: {weapon.MagazineAmmo}/{weapon.MagazineSize}", x, y + lineHeight, fontSize, Color.RayWhite);
-        Raylib.DrawText($"Reserve: {weapon.ReserveAmmo}", x, y + lineHeight * 2, fontSize, Color.RayWhite);
-        Raylib.DrawText(reloadState, x, y + lineHeight * 3, fontSize, weapon.IsReloading ? Color.Gold : Color.LightGray);
+        Raylib.DrawText($"Slot: {player.EquippedSlot}", x, y, fontSize, Color.LightGray);
+        Raylib.DrawText($"Weapon: {weapon?.Name ?? "Unarmed"}", x, y + lineHeight, fontSize, weapon is null ? Color.Gold : Color.RayWhite);
+
+        if (weapon is null)
+        {
+            return;
+        }
+
+        string reloadState = weapon.IsReloading ? "Reload: RELOADING" : "Reload: READY";
+        Raylib.DrawText($"Magazine: {weapon.MagazineAmmo}/{weapon.MagazineSize}", x, y + lineHeight * 2, fontSize, Color.RayWhite);
+        Raylib.DrawText($"Reserve: {weapon.ReserveAmmo} | {reloadState}", x, y + lineHeight * 3, fontSize, weapon.IsReloading ? Color.Gold : Color.LightGray);
     }
 
     private static void RenderBar(string label, float percent, int x, int y, int width, int height, Color fillColor, float damageFlash, float rechargePulse)
