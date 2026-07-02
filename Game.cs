@@ -206,11 +206,11 @@ public sealed class Game : IDisposable
 
     private static List<Enemy> CreateTestEnemies() =>
     [
-        new Enemy(new Vector3(-6f, 0f, -8f)),
-        new Enemy(new Vector3(0f, 0f, -12f)),
-        new Enemy(new Vector3(6f, 0f, -8f)),
-        new Enemy(new Vector3(-10f, 0f, 2f)),
-        new Enemy(new Vector3(10f, 0f, 2f))
+        new Enemy(new Vector3(-4.8f, 0f, -3.3f)),
+        new Enemy(new Vector3(0.8f, 0f, -5.8f)),
+        new Enemy(new Vector3(4.6f, 0f, -4.2f)),
+        new Enemy(new Vector3(-3.2f, 0f, -8.1f)),
+        new Enemy(new Vector3(2.8f, 0f, -8.4f))
     ];
 
     public void Dispose()

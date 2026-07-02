@@ -1,6 +1,6 @@
 # Raylib Halo Clone Prototype
 
-A Halo-inspired first-person shooter prototype built with C# and [Raylib-cs](https://github.com/ChrisDill/Raylib-cs). The project is a compact arena combat sandbox focused on responsive movement, readable HUD feedback, basic enemy encounters, objectives, switches, doors, and a generic interactable pickup/object foundation.
+A Halo-inspired first-person shooter prototype built with C# and [Raylib-cs](https://github.com/ChrisDill/Raylib-cs). The project is a compact sci-fi ship interior combat sandbox focused on responsive movement, readable HUD feedback, basic enemy encounters, objectives, switches, doors, and a generic interactable pickup/object foundation.
 
 ## Requirements
 
@@ -43,14 +43,14 @@ dotnet run -c Debug
 ## Current Features
 
 - **FPS movement**: first-person WASD movement, mouse look, sprinting, and jumping.
-- **Collision and platforming**: player collision against arena bounds, walls, doors, cover, and a raised platforming route.
+- **Collision and ship traversal**: player collision against arena bounds, ship walls, doors, cover, crates, bulkheads, and raised floor plates.
 - **Combat**: hitscan rifle, shotgun, and pistol firing with enemy hit detection, tracer feedback, muzzle flash, and recoil/kick.
 - **Weapon ammo and reload**: magazine ammo, reserve ammo, reload timing, safe unarmed input handling, and HUD reload status.
 - **Equipment resources**: stackable medkits, lethal equipment storage, and special equipment storage with HUD counts and placeholder use feedback.
 - **Player health and shield**: health damage, rechargeable shield, shield break feedback, and damage overlays.
 - **Enemy AI and combat**: enemies detect the player, move, strafe, check line of sight, aim, attack, take damage, and flash when hit.
 - **HUD**: crosshair, FPS/debug info, position/speed, objective text, enemy count, shield/health bars, weapon/ammo panel, reload status, hit marker, damage overlays, interaction prompts, and victory/defeat messaging.
-- **Objectives**: eliminate all targets, activate the extraction switch, then move into the extraction zone.
+- **Objectives**: breach into the derelict ship, restore lights, open security doors, clear the cargo room, activate the engineering extraction console, then move into the extraction zone.
 - **Switches, doors, and lights**: light switch, security door switch, powered door switch, extraction switch, doors, lights, and light fixtures are all represented in the level.
 - **Extraction, victory, defeat, and reset**: reaching the active extraction zone after completing objectives triggers victory; death triggers defeat; Enter resets the level.
 - **Interactable pickup system**: switches, pickups, and dropped objects use a shared interactable model with position, bounds, display text, active/consumed state, rendering, and interaction behavior.
@@ -77,12 +77,17 @@ Additional equipment:
 
 The default mission loadout is an **MA5B Rifle** in Primary, an empty Secondary slot, an **M6D Pistol** in Sidearm, **1/3 Medkits**, **0/2 Lethals**, and **0/1 Special**. Weapon pickups go into their category-matched slot. If that slot is empty, the pickup is stored and equipped there; if it is full, the pickup replaces that slot and drops the old weapon nearby using the existing no-overlap placement rules. Restarting after victory or defeat restores the default mission loadout, so weapons and equipment used or dropped during a run reset only when the level restarts.
 
+## Level: Derelict Space Hulk
+
+The current playable level is a compact UNSC-style ship interior built entirely from Raylib box geometry. The player starts in a small breached entry bay, pushes through a narrow cover-lined corridor, restores lighting at a wall switch, opens a security bulkhead, fights through a cargo/storage room full of crate cover, collects shotgun and medkit pickups, reaches the engineering/control room, activates extraction, then returns to or proceeds into the marked extraction zone.
+
 ## Gameplay Loop
 
-1. **Eliminate targets**: Use movement, cover, shield recharge windows, and the rifle to defeat all enemies in the arena.
-2. **Use switches**: Aim at switches with the crosshair and press E when close enough to toggle lights or open doors.
-3. **Activate extraction**: Once all targets are down, find and activate the extraction switch.
-4. **Reach extraction zone**: Move fully into the active extraction zone to complete the match and trigger victory.
+1. **Breach and power up**: Start in the entry bay, move down the corridor, and activate the light switch.
+2. **Open the ship**: Use switches with E to open the security and engineering doors while keeping the existing objective/door systems intact.
+3. **Clear cargo storage**: Use cover, shield recharge windows, and weapon pickups to defeat enemies in the storage room.
+4. **Activate extraction**: Once all targets are down, use the engineering/control room extraction console.
+5. **Reach extraction zone**: Move fully into the active extraction zone to complete the match and trigger victory.
 
 ## Next Steps
 
