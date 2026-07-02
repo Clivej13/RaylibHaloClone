@@ -98,27 +98,27 @@ public sealed class Hud
 
     private void RenderStatusBars(Player player, int x, int y)
     {
-        RenderBar("SHIELD", player.Shield / Player.MaxShield, x, y, 260, 22, new Color(72, 194, 255, 255), shieldHitFlashRemaining, shieldRechargePulseRemaining);
-        RenderBar("HEALTH", player.Health / Player.MaxHealth, x, y + 42, 260, 22, new Color(96, 236, 126, 255), healthDamageFlashRemaining, 0f);
+        RenderBar("SHIELD", player.Shield / Player.MaxShield, x, y, 260, 22, Rgba(72, 194, 255, 255), shieldHitFlashRemaining, shieldRechargePulseRemaining);
+        RenderBar("HEALTH", player.Health / Player.MaxHealth, x, y + 42, 260, 22, Rgba(96, 236, 126, 255), healthDamageFlashRemaining, 0f);
     }
 
     private static void RenderBar(string label, float percent, int x, int y, int width, int height, Color fillColor, float damageFlash, float rechargePulse)
     {
         percent = MathUtils.Clamp(percent, 0f, 1f);
-        Color frameColor = damageFlash > 0f ? Color.White : new Color(120, 132, 150, 255);
-        Color glowColor = rechargePulse > 0f ? new Color(126, 235, 255, 85) : new Color(0, 0, 0, 120);
+        Color frameColor = damageFlash > 0f ? Color.White : Rgba(120, 132, 150, 255);
+        Color glowColor = rechargePulse > 0f ? Rgba(126, 235, 255, 85) : Rgba(0, 0, 0, 120);
 
         Raylib.DrawText(label, x, y - 20, 16, Color.LightGray);
         Raylib.DrawRectangle(x - 4, y - 4, width + 8, height + 8, glowColor);
-        Raylib.DrawRectangle(x, y, width, height, new Color(12, 18, 28, 220));
+        Raylib.DrawRectangle(x, y, width, height, Rgba(12, 18, 28, 220));
         Raylib.DrawRectangle(x, y, (int)(width * percent), height, fillColor);
         Raylib.DrawRectangleLines(x, y, width, height, frameColor);
 
-        int segments = 10;
+        const int segments = 10;
         for (int i = 1; i < segments; i++)
         {
             int tickX = x + (width * i / segments);
-            Raylib.DrawLine(tickX, y + 3, tickX, y + height - 3, new Color(255, 255, 255, 55));
+            Raylib.DrawLine(tickX, y + 3, tickX, y + height - 3, Rgba(255, 255, 255, 55));
         }
     }
 
@@ -126,22 +126,22 @@ public sealed class Hud
     {
         if (shieldHitFlashRemaining > 0f)
         {
-            byte alpha = (byte)(85f * (shieldHitFlashRemaining / ShieldHitFlashDuration));
-            Raylib.DrawRectangle(0, 0, screenWidth, screenHeight, new Color(70, 185, 255, alpha));
+            int alpha = (int)(85f * (shieldHitFlashRemaining / ShieldHitFlashDuration));
+            Raylib.DrawRectangle(0, 0, screenWidth, screenHeight, Rgba(70, 185, 255, alpha));
         }
 
         if (healthDamageFlashRemaining > 0f)
         {
-            byte alpha = (byte)(105f * (healthDamageFlashRemaining / HealthDamageFlashDuration));
-            Raylib.DrawRectangle(0, 0, screenWidth, screenHeight, new Color(210, 35, 35, alpha));
+            int alpha = (int)(105f * (healthDamageFlashRemaining / HealthDamageFlashDuration));
+            Raylib.DrawRectangle(0, 0, screenWidth, screenHeight, Rgba(210, 35, 35, alpha));
         }
 
         if (shieldBreakRemaining > 0f)
         {
             float t = shieldBreakRemaining / ShieldBreakDuration;
-            byte alpha = (byte)(155f * t);
-            Raylib.DrawCircleLines(screenWidth / 2, screenHeight / 2, 250f + (1f - t) * 180f, new Color(122, 220, 255, alpha));
-            Raylib.DrawText("SHIELD DOWN", (screenWidth / 2) - 80, (screenHeight / 2) + 86, 22, new Color(122, 220, 255, alpha));
+            int alpha = (int)(155f * t);
+            Raylib.DrawCircleLines(screenWidth / 2, screenHeight / 2, 250f + (1f - t) * 180f, Rgba(122, 220, 255, alpha));
+            Raylib.DrawText("SHIELD DOWN", (screenWidth / 2) - 80, (screenHeight / 2) + 86, 22, Rgba(122, 220, 255, alpha));
         }
     }
 
@@ -160,13 +160,14 @@ public sealed class Hud
         string title = victory ? "VICTORY" : "DEFEATED";
         string subtitle = victory ? "All targets eliminated" : "Armor systems offline";
         string detail = victory ? "Arena secure" : $"Targets remaining: {livingEnemies}";
-        Color accent = victory ? Color.Gold : new Color(255, 80, 80, 255);
+        Color accent = victory ? Color.Gold : Rgba(255, 80, 80, 255);
 
         const int panelWidth = 520;
         const int panelHeight = 190;
         int panelX = centerX - panelWidth / 2;
         int panelY = centerY - 130;
-        Raylib.DrawRectangle(panelX, panelY, panelWidth, panelHeight, new Color(4, 8, 14, 225));
+
+        Raylib.DrawRectangle(panelX, panelY, panelWidth, panelHeight, Rgba(4, 8, 14, 225));
         Raylib.DrawRectangleLines(panelX, panelY, panelWidth, panelHeight, accent);
         Raylib.DrawRectangle(panelX, panelY, panelWidth, 5, accent);
 
@@ -187,12 +188,22 @@ public sealed class Hud
         float t = hitMarkerRemaining / HitMarkerDuration;
         int inner = 9 + (int)(5f * (1f - t));
         int outer = 24 + (int)(7f * (1f - t));
-        byte alpha = (byte)(255f * t);
-        Color markerColor = new(255, 230, 118, alpha);
+        int alpha = (int)(255f * t);
+
+        Color markerColor = Rgba(255, 230, 118, alpha);
         Raylib.DrawLine(centerX - outer, centerY - outer, centerX - inner, centerY - inner, markerColor);
         Raylib.DrawLine(centerX + inner, centerY - inner, centerX + outer, centerY - outer, markerColor);
         Raylib.DrawLine(centerX - outer, centerY + outer, centerX - inner, centerY + inner, markerColor);
         Raylib.DrawLine(centerX + inner, centerY + inner, centerX + outer, centerY + outer, markerColor);
-        Raylib.DrawCircleLines(centerX, centerY, 18f, new Color(255, 255, 255, (byte)(110f * t)));
+        Raylib.DrawCircleLines(centerX, centerY, 18f, Rgba(255, 255, 255, (int)(110f * t)));
+    }
+
+    private static Color Rgba(int r, int g, int b, int a)
+    {
+        return new Color(
+            (byte)Math.Clamp(r, 0, 255),
+            (byte)Math.Clamp(g, 0, 255),
+            (byte)Math.Clamp(b, 0, 255),
+            (byte)Math.Clamp(a, 0, 255));
     }
 }
