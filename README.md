@@ -1,6 +1,6 @@
 # Raylib Halo Clone Prototype
 
-A Halo-inspired first-person shooter prototype built with C# and [Raylib-cs](https://github.com/ChrisDill/Raylib-cs). The project is a compact arena combat sandbox focused on responsive movement, readable HUD feedback, basic enemy encounters, objectives, switches, doors, and a generic interactable pickup/object foundation.
+A Halo-inspired first-person shooter prototype built with C# and [Raylib-cs](https://github.com/ChrisDill/Raylib-cs). The project is a compact sci-fi ship interior combat sandbox focused on responsive movement, readable HUD feedback, basic enemy encounters, objectives, switches, doors, and a generic interactable pickup/object foundation.
 
 ## Requirements
 
@@ -43,7 +43,7 @@ dotnet run -c Debug
 ## Current Features
 
 - **FPS movement**: first-person WASD movement, mouse look, sprinting, and jumping.
-- **Collision and platforming**: player collision against arena bounds, walls, doors, cover, and a raised platforming route.
+- **Collision and level geometry**: player collision against arena bounds, ship hull walls, wide corridors, doors, and box cover.
 - **Combat**: hitscan rifle, shotgun, and pistol firing with enemy hit detection, tracer feedback, muzzle flash, and recoil/kick.
 - **Weapon ammo and reload**: magazine ammo, reserve ammo, reload timing, safe unarmed input handling, and HUD reload status.
 - **Equipment resources**: stackable medkits, lethal equipment storage, and special equipment storage with HUD counts and placeholder use feedback.
@@ -58,6 +58,19 @@ dotnet run -c Debug
 - **Medkits**: medkit pickups add to a stack instead of healing instantly; medkits heal health only when used and never affect shields.
 - **Weapon pickups and dropping**: world weapon pickups can be collected with E, and the current weapon can be dropped with G as a new world object. Dropping removes the weapon from its equipment slot instead of regenerating a replacement rifle.
 - **Object overlap prevention**: placed and dropped objects try deterministic nearby offsets when the preferred spawn position overlaps another pickup, interactable, or collision object.
+
+## Current Level: Space Hulk Ship
+
+The first playable level is a hand-authored compact space hulk interior built entirely from simple Raylib cube and box geometry. It stays inside the existing arena bounds while replacing the old open arena with a breached entry bay, wide connecting corridors, a cargo/storage fight room with crate cover, an engineering/control room, and a final extraction zone. The objective loop is unchanged: eliminate enemies, activate the extraction switch, then stand fully inside the active extraction zone.
+
+Recommended route:
+
+1. Spawn in the breached entry bay.
+2. Move through the crate-lined corridor and activate the light switch.
+3. Use the security door switch to enter cargo/storage.
+4. Fight through enemies, collect the shotgun, extra weapon pickups, and medkits.
+5. Activate the powered engineering door switch.
+6. Reach engineering/control, activate the extraction switch, then move to extraction.
 
 ## Equipment System
 
@@ -79,7 +92,7 @@ The default mission loadout is an **MA5B Rifle** in Primary, an empty Secondary 
 
 ## Gameplay Loop
 
-1. **Eliminate targets**: Use movement, cover, shield recharge windows, and the rifle to defeat all enemies in the arena.
+1. **Eliminate targets**: Start in the breached entry bay, push through the crate-lined corridor, open the security and engineering doors, and use cargo-room cover to defeat all enemies.
 2. **Use switches**: Aim at switches with the crosshair and press E when close enough to toggle lights or open doors.
 3. **Activate extraction**: Once all targets are down, find and activate the extraction switch.
 4. **Reach extraction zone**: Move fully into the active extraction zone to complete the match and trigger victory.

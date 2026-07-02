@@ -96,36 +96,14 @@ public sealed class Level
     private static readonly Color LitFloorColor = new(64, 72, 82, 255);
     private static readonly Color LitWallColor = new(82, 92, 108, 255);
     private static readonly Color LitCoverColor = new(100, 111, 128, 255);
-    private static readonly Color RoutePlatformColor = new(88, 132, 190, 255);
-    private static readonly Color FinalPlatformColor = new(190, 142, 64, 255);
     private static readonly Color SpawnMarkerColor = new(88, 190, 118, 165);
     private static readonly Color InactiveExitFillColor = new(115, 72, 72, 55);
     private static readonly Color InactiveExitWireColor = new(170, 82, 82, 255);
     private static readonly Color ActiveExitFillColor = new(60, 220, 210, 75);
     private static readonly Color ActiveExitWireColor = new(100, 255, 220, 255);
 
-    private const int PlatformCount = 7;
-    private const float CentralPlatformSize = 2.8f;
-    private const float HeightStep = 0.32f;
-    private const float PreviousFirstPlatformHeight = 1.05f;
-    private const float CentralPlatformHeight = PreviousFirstPlatformHeight;
-    private const float BasePlatformHeight = PreviousFirstPlatformHeight + HeightStep;
-    private const float PlatformSize = 2.4f;
-    private const float StartAngleDegrees = -90f;
-    private const float MaxReasonableJumpDistance = 5.25f;
-    private const float PreviousCenterToFirstPlatformGap = 7.5f - (CentralPlatformSize / 2f) - (PlatformSize / 2f);
-    private const float CenterJumpGapScale = 0.75f;
-    private const float CenterToFirstPlatformGap = PreviousCenterToFirstPlatformGap * CenterJumpGapScale;
-    private const float RingRadius = CenterToFirstPlatformGap + (CentralPlatformSize / 2f) + (PlatformSize / 2f);
-
-    // Center-to-first horizontal spacing stays fixed at the tuned 75% value: 4.9m * 0.75 = 3.675m.
-    // Heights are shifted up by one step: the center is the old first-platform height, and the new
-    // first ring platform is the old second-platform height. Dropping the ring to 7 platforms increases
-    // chord distance: 2 * 6.275 * sin(pi / 7) = ~5.45, so edge gap is ~3.05 after the 2.4m width.
-    private const float ConsecutivePlatformGap = 2f * RingRadius * 0.4338837391f - PlatformSize;
-
-    public Vector3 PlayerSpawnPosition { get; } = new(0f, 0f, 8f);
-    public Vector3 ExitPosition { get; } = new(0f, 0.95f, 16f);
+    public Vector3 PlayerSpawnPosition { get; } = new(0f, 0f, 18f);
+    public Vector3 ExitPosition { get; } = new(0f, 0.95f, -20f);
     public Vector3 ExitSize { get; } = new(3f, 2.1f, 3f);
     public BoundingBox ExitBox => ToBoundingBox(ExitPosition, ExitSize);
     public IReadOnlyList<InteractableSwitch> Switches => switches;
@@ -137,7 +115,6 @@ public sealed class Level
 
     private readonly List<BoundingBox> collisionBoxes = new();
     private readonly List<(Vector3 Position, Vector3 Size)> coverObjects = new();
-    private readonly List<(Vector3 Position, Vector3 Size, bool IsFinal)> routePlatforms = new();
     private readonly List<(Vector3 Position, Vector3 Size)> walls = new();
     private readonly List<Door> doors = new();
     private readonly List<InteractableSwitch> switches = new();
@@ -146,12 +123,7 @@ public sealed class Level
 
     public Level()
     {
-        AddWall(new Vector3(0f, WallHeight / 2f, -ArenaHalfSize), new Vector3(ArenaHalfSize * 2f, WallHeight, WallThickness));
-        AddWall(new Vector3(0f, WallHeight / 2f, ArenaHalfSize), new Vector3(ArenaHalfSize * 2f, WallHeight, WallThickness));
-        AddWall(new Vector3(-ArenaHalfSize, WallHeight / 2f, 0f), new Vector3(WallThickness, WallHeight, ArenaHalfSize * 2f));
-        AddWall(new Vector3(ArenaHalfSize, WallHeight / 2f, 0f), new Vector3(WallThickness, WallHeight, ArenaHalfSize * 2f));
-
-        BuildPlatformingRoute();
+        BuildShipInterior();
         BuildInteractiveObjects();
     }
 
@@ -214,12 +186,7 @@ public sealed class Level
             Raylib.DrawCubeWiresV(cover.Position, cover.Size, Color.Black);
         }
 
-        foreach (var platform in routePlatforms)
-        {
-            Color color = platform.IsFinal ? FinalPlatformColor : RoutePlatformColor;
-            Raylib.DrawCubeV(platform.Position, platform.Size, LightsOn ? color : new Color((byte)(color.R / 2), (byte)(color.G / 2), (byte)(color.B / 2), color.A));
-            Raylib.DrawCubeWiresV(platform.Position, platform.Size, Color.Black);
-        }
+
 
         RenderDoors();
         RenderSwitches();
@@ -250,18 +217,86 @@ public sealed class Level
         return MathUtils.ClampHorizontal(position, -ArenaHalfSize + radius, ArenaHalfSize - radius, -ArenaHalfSize + radius, ArenaHalfSize - radius);
     }
 
+
+    private void BuildShipInterior()
+    {
+        AddOuterHull();
+        AddRoom("Breached Entry Bay", new Vector3(0f, 0f, 17f), new Vector3(12f, 0f, 10f));
+        AddRoom("Cargo Storage", new Vector3(0f, 0f, -2.5f), new Vector3(15f, 0f, 12.5f));
+        AddRoom("Engineering Control", new Vector3(0f, 0f, -15f), new Vector3(12f, 0f, 10f));
+        AddCorridor(new Vector3(0f, 0f, 7.5f), 5f, 9f);
+        AddCorridor(new Vector3(0f, 0f, -8.75f), 5f, 5.5f);
+
+        AddBreach(new Vector3(-4.9f, 1.2f, 20.6f), new Vector3(2.2f, 2.4f, 0.45f));
+        AddLightFixture(new Vector3(-2.4f, 3.2f, 18.5f), new Vector3(1.1f, 0.18f, 0.55f));
+        AddLightFixture(new Vector3(2.4f, 3.2f, 15.5f), new Vector3(1.1f, 0.18f, 0.55f));
+
+        AddCrate(new Vector3(-1.9f, 0.65f, 10.8f), new Vector3(1.5f, 1.3f, 1.5f));
+        AddCrate(new Vector3(2f, 0.45f, 8.3f), new Vector3(1.4f, 0.9f, 1.4f));
+        AddCover(new Vector3(-3.4f, 0.75f, 2f), new Vector3(1.1f, 1.5f, 3.1f));
+        AddCover(new Vector3(3.2f, 0.75f, -4.5f), new Vector3(1.1f, 1.5f, 3.4f));
+        AddCrate(new Vector3(-1.2f, 0.55f, -1.8f), new Vector3(1.8f, 1.1f, 1.8f));
+        AddCrate(new Vector3(2.3f, 0.55f, 0.8f), new Vector3(1.6f, 1.1f, 1.6f));
+        AddCrate(new Vector3(-4.7f, 0.45f, -6.4f), new Vector3(1.5f, 0.9f, 1.5f));
+
+        AddCover(new Vector3(-3.8f, 0.75f, -14.5f), new Vector3(1.2f, 1.5f, 2.8f));
+        AddCover(new Vector3(3.8f, 0.75f, -16.8f), new Vector3(1.2f, 1.5f, 2.8f));
+        AddCover(new Vector3(0f, 0.55f, -18.1f), new Vector3(2.4f, 1.1f, 1.1f));
+    }
+
+    private void AddOuterHull()
+    {
+        AddWall(new Vector3(0f, WallHeight / 2f, -ArenaHalfSize), new Vector3(ArenaHalfSize * 2f, WallHeight, WallThickness));
+        AddWall(new Vector3(0f, WallHeight / 2f, ArenaHalfSize), new Vector3(ArenaHalfSize * 2f, WallHeight, WallThickness));
+        AddWall(new Vector3(-ArenaHalfSize, WallHeight / 2f, 0f), new Vector3(WallThickness, WallHeight, ArenaHalfSize * 2f));
+        AddWall(new Vector3(ArenaHalfSize, WallHeight / 2f, 0f), new Vector3(WallThickness, WallHeight, ArenaHalfSize * 2f));
+    }
+
+    private void AddRoom(string name, Vector3 center, Vector3 size)
+    {
+        _ = name;
+        float minX = center.X - size.X / 2f;
+        float maxX = center.X + size.X / 2f;
+        AddWall(new Vector3(minX, WallHeight / 2f, center.Z), new Vector3(WallThickness, WallHeight, size.Z));
+        AddWall(new Vector3(maxX, WallHeight / 2f, center.Z), new Vector3(WallThickness, WallHeight, size.Z));
+    }
+
+    private void AddCorridor(Vector3 center, float width, float length)
+    {
+        AddWall(new Vector3(-width / 2f, WallHeight / 2f, center.Z), new Vector3(WallThickness, WallHeight, length));
+        AddWall(new Vector3(width / 2f, WallHeight / 2f, center.Z), new Vector3(WallThickness, WallHeight, length));
+    }
+
+    private void AddCrate(Vector3 position, Vector3 size) => AddCover(position, size);
+
+    private void AddBreach(Vector3 position, Vector3 size)
+    {
+        coverObjects.Add((position, size));
+    }
+
+    private void AddLightFixture(Vector3 position, Vector3 size)
+    {
+        coverObjects.Add((position, size));
+    }
+
     private void BuildInteractiveObjects()
     {
-        doors.Add(new Door("Security Door", new Vector3(-8f, 1.25f, -2f), new Vector3(4f, 2.5f, 0.45f), new Color(120, 76, 58, 255), new Color(72, 130, 84, 130)));
-        doors.Add(new Door("Powered Door", new Vector3(8f, 1.25f, -2f), new Vector3(4f, 2.5f, 0.45f), new Color(92, 54, 54, 255), new Color(72, 130, 190, 130)));
+        doors.Add(new Door("Security Door", new Vector3(0f, 1.45f, 4f), new Vector3(5f, 2.9f, 0.45f), new Color(120, 76, 58, 255), new Color(72, 130, 84, 130)));
+        doors.Add(new Door("Engineering Door", new Vector3(0f, 1.45f, -9f), new Vector3(5f, 2.9f, 0.45f), new Color(92, 54, 54, 255), new Color(72, 130, 190, 130)));
 
-        switches.Add(new InteractableSwitch(SwitchType.Lights, new Vector3(-15f, 0.55f, 8f), new Vector3(0.8f, 1.1f, 0.45f)));
-        switches.Add(new InteractableSwitch(SwitchType.DoorOpen, new Vector3(-11f, 0.55f, -2f), new Vector3(0.8f, 1.1f, 0.45f)));
-        switches.Add(new InteractableSwitch(SwitchType.PoweredDoor, new Vector3(11f, 0.55f, -2f), new Vector3(0.8f, 1.1f, 0.45f)));
-        switches.Add(new InteractableSwitch(SwitchType.ExitActivation, new Vector3(3.5f, 0.55f, 15f), new Vector3(0.8f, 1.1f, 0.45f)));
+        switches.Add(new InteractableSwitch(SwitchType.Lights, new Vector3(-5.2f, 0.65f, 15.2f), new Vector3(0.8f, 1.1f, 0.45f)));
+        switches.Add(new InteractableSwitch(SwitchType.DoorOpen, new Vector3(1.8f, 0.65f, 5.35f), new Vector3(0.8f, 1.1f, 0.45f)));
+        switches.Add(new InteractableSwitch(SwitchType.PoweredDoor, new Vector3(-1.8f, 0.65f, -7.8f), new Vector3(0.8f, 1.1f, 0.45f)));
+        switches.Add(new InteractableSwitch(SwitchType.ExitActivation, new Vector3(4.8f, 0.65f, -14.5f), new Vector3(0.8f, 1.1f, 0.45f)));
         AddInitialPickups();
 
-        lightFixtures.AddRange([new Vector3(-10f, 4.6f, -10f), new Vector3(0f, 4.6f, 0f), new Vector3(10f, 4.6f, 10f)]);
+        lightFixtures.AddRange([
+            new Vector3(0f, 4.35f, 17f),
+            new Vector3(0f, 4.35f, 9f),
+            new Vector3(0f, 4.35f, -2f),
+            new Vector3(0f, 4.35f, -12f),
+            new Vector3(0f, 4.35f, -19f)
+        ]);
     }
 
 
@@ -281,10 +316,11 @@ public sealed class Level
 
     private void AddInitialPickups()
     {
-        AddWorldObject(new HealthPackPickup(new Vector3(-5f, 0.25f, 6f)));
-        AddWorldObject(new WeaponPickup(new Vector3(5f, 0.35f, 6f), Weapon.CreateRifle()));
-        AddWorldObject(new WeaponPickup(new Vector3(7f, 0.35f, 8f), Weapon.CreateShotgun()));
-        AddWorldObject(new WeaponPickup(new Vector3(3f, 0.35f, 8f), Weapon.CreatePistol()));
+        AddWorldObject(new HealthPackPickup(new Vector3(-4.8f, 0.25f, -5.6f)));
+        AddWorldObject(new HealthPackPickup(new Vector3(4.8f, 0.25f, -13.2f)));
+        AddWorldObject(new WeaponPickup(new Vector3(4.7f, 0.35f, -1.6f), Weapon.CreateRifle()));
+        AddWorldObject(new WeaponPickup(new Vector3(-4.6f, 0.35f, -3.3f), Weapon.CreateShotgun()));
+        AddWorldObject(new WeaponPickup(new Vector3(2.1f, 0.35f, -12.4f), Weapon.CreatePistol()));
     }
 
     private void AddWorldObject(WorldInteractable worldObject)
@@ -372,34 +408,7 @@ public sealed class Level
         collisionBoxes.Add(ToBoundingBox(position, size));
     }
 
-    private void AddRoutePlatform(Vector3 position, Vector3 size, bool isFinal = false)
-    {
-        routePlatforms.Add((position, size, isFinal));
-        collisionBoxes.Add(ToBoundingBox(position, size));
-    }
 
-    private void BuildPlatformingRoute()
-    {
-        if (ConsecutivePlatformGap > MaxReasonableJumpDistance || CenterToFirstPlatformGap > MaxReasonableJumpDistance)
-        {
-            throw new InvalidOperationException("Platform route gap exceeds the configured sprint-jump distance.");
-        }
-
-        AddRoutePlatform(
-            new Vector3(0f, CentralPlatformHeight / 2f, 0f),
-            new Vector3(CentralPlatformSize, CentralPlatformHeight, CentralPlatformSize));
-
-        float startAngleRadians = StartAngleDegrees * MathUtils.Deg2Rad;
-        for (int i = 0; i < PlatformCount; i++)
-        {
-            float angle = startAngleRadians + i * MathF.Tau / PlatformCount;
-            float height = BasePlatformHeight + i * HeightStep;
-            Vector3 position = new(MathF.Cos(angle) * RingRadius, height / 2f, MathF.Sin(angle) * RingRadius);
-            Vector3 size = new(PlatformSize, height, PlatformSize);
-
-            AddRoutePlatform(position, size, i == PlatformCount - 1);
-        }
-    }
 
     public static BoundingBox ToBoundingBox(Vector3 center, Vector3 size)
     {
