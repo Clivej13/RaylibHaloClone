@@ -29,6 +29,9 @@ dotnet run -c Debug
 - **Space**: Jump
 - **Left Mouse Button**: Fire the equipped weapon when armed
 - **R**: Reload the equipped weapon when armed
+- **H**: Use a medkit to heal health when damaged
+- **Q**: Use lethal equipment placeholder
+- **C**: Use special equipment placeholder
 - **1**: Equip Primary slot
 - **2**: Equip Secondary slot
 - **3**: Equip Sidearm slot
@@ -43,6 +46,7 @@ dotnet run -c Debug
 - **Collision and platforming**: player collision against arena bounds, walls, doors, cover, and a raised platforming route.
 - **Combat**: hitscan rifle, shotgun, and pistol firing with enemy hit detection, tracer feedback, muzzle flash, and recoil/kick.
 - **Weapon ammo and reload**: magazine ammo, reserve ammo, reload timing, safe unarmed input handling, and HUD reload status.
+- **Equipment resources**: stackable medkits, lethal equipment storage, and special equipment storage with HUD counts and placeholder use feedback.
 - **Player health and shield**: health damage, rechargeable shield, shield break feedback, and damage overlays.
 - **Enemy AI and combat**: enemies detect the player, move, strafe, check line of sight, aim, attack, take damage, and flash when hit.
 - **HUD**: crosshair, FPS/debug info, position/speed, objective text, enemy count, shield/health bars, weapon/ammo panel, reload status, hit marker, damage overlays, interaction prompts, and victory/defeat messaging.
@@ -51,21 +55,27 @@ dotnet run -c Debug
 - **Extraction, victory, defeat, and reset**: reaching the active extraction zone after completing objectives triggers victory; death triggers defeat; Enter resets the level.
 - **Interactable pickup system**: switches, pickups, and dropped objects use a shared interactable model with position, bounds, display text, active/consumed state, rendering, and interaction behavior.
 - **Crosshair interactions**: interactions are selected by camera position and look direction, require the object to be under the crosshair, and use a short activation distance.
-- **Health packs**: health packs heal player health without affecting shields and are not consumed when health is already full.
+- **Medkits**: medkit pickups add to a stack instead of healing instantly; medkits heal health only when used and never affect shields.
 - **Weapon pickups and dropping**: world weapon pickups can be collected with E, and the current weapon can be dropped with G as a new world object. Dropping removes the weapon from its equipment slot instead of regenerating a replacement rifle.
 - **Object overlap prevention**: placed and dropped objects try deterministic nearby offsets when the preferred spawn position overlaps another pickup, interactable, or collision object.
 
 ## Equipment System
 
-Phase 2 keeps the equipment foundation intentionally lightweight without a full inventory UI or Resident Evil-style inventory management. The player has **Primary**, **Secondary**, and **Sidearm** slots, and the current weapon is derived from the selected equipped slot. Empty slots are allowed, so selecting or dropping into an empty slot leaves the player **Unarmed**; firing and reloading safely do nothing while unarmed.
+The equipment foundation remains intentionally lightweight without a full inventory UI or Resident Evil-style inventory management. The player has **Primary**, **Secondary**, and **Sidearm** weapon slots, stackable **Medkits**, a **Lethal** equipment slot, and a **Special** equipment slot. The current weapon is derived from the selected equipped weapon slot. Empty weapon, lethal, and special slots are allowed, so selecting or using empty slots safely does nothing and shows HUD feedback where appropriate.
 
-Current equipment content:
+Current weapon content:
 
 - **Primary slot**: **MA5B Rifle**. Automatic, balanced damage, range, magazine size, and reserve ammo.
 - **Secondary slot**: **M90 Shotgun**. Semi-auto, higher damage, shorter range, slower fire rate, and smaller magazine. The test level includes a shotgun pickup.
 - **Sidearm slot**: **M6D Pistol**. Semi-auto, lower damage than the rifle, moderate range, slower fire cadence, and sidearm ammo.
 
-The default mission loadout is an **MA5B Rifle** in Primary, an empty Secondary slot, and an **M6D Pistol** in Sidearm. Weapon pickups go into their category-matched slot. If that slot is empty, the pickup is stored and equipped there; if it is full, the pickup replaces that slot and drops the old weapon nearby using the existing no-overlap placement rules. Restarting after victory or defeat restores the default mission loadout, so weapons dropped during a run stay removed only for that run.
+Additional equipment:
+
+- **Medkit stack**: starts at **1/3**. Medkit pickups can be collected at full health while the stack is not full. Press **H** to heal health only; using a medkit at full health does not consume it.
+- **Lethal equipment slot**: placeholder foundation with **0/2** by default and no grenade physics yet. Press **Q** to attempt use; empty lethal storage shows `NO LETHAL AVAILABLE`.
+- **Special equipment slot**: placeholder foundation with **0/1** by default and no special behaviour yet. Press **C** to attempt use; empty special storage shows `NO SPECIAL AVAILABLE`.
+
+The default mission loadout is an **MA5B Rifle** in Primary, an empty Secondary slot, an **M6D Pistol** in Sidearm, **1/3 Medkits**, **0/2 Lethals**, and **0/1 Special**. Weapon pickups go into their category-matched slot. If that slot is empty, the pickup is stored and equipped there; if it is full, the pickup replaces that slot and drops the old weapon nearby using the existing no-overlap placement rules. Restarting after victory or defeat restores the default mission loadout, so weapons and equipment used or dropped during a run reset only when the level restarts.
 
 ## Gameplay Loop
 

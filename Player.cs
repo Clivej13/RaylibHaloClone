@@ -28,6 +28,8 @@ public sealed class Player
     private const float WeaponTracerTime = 0.06f;
     private const float MuzzleFlashTime = 0.05f;
     private const float ScreenKickDegrees = 0.45f;
+    private const float MedkitHealAmount = 45f;
+    private const float EquipmentMessageTime = 1.15f;
 
 
     private Vector3 position;
@@ -40,6 +42,7 @@ public sealed class Player
     private float muzzleFlashRemaining;
     private Vector3 lastWeaponTraceStart;
     private Vector3 lastWeaponTraceEnd;
+    private float equipmentMessageRemaining;
 
 
     public Player(Vector3 spawnPosition)
@@ -70,6 +73,8 @@ public sealed class Player
     public float MuzzleFlashIntensity => MuzzleFlashTime <= 0f ? 0f : muzzleFlashRemaining / MuzzleFlashTime;
     public Vector3 WeaponTraceStart => lastWeaponTraceStart;
     public Vector3 WeaponTraceEnd => lastWeaponTraceEnd;
+    public string? EquipmentMessage { get; private set; }
+    public bool HasEquipmentMessage => equipmentMessageRemaining > 0f && !string.IsNullOrWhiteSpace(EquipmentMessage);
 
     private Vector3 Forward
     {
@@ -108,6 +113,8 @@ public sealed class Player
         Shield -= shieldDamage;
         Health = MathF.Max(0f, Health - (damage - shieldDamage));
     }
+
+    public bool PickUpMedkit() => Equipment.AddMedkit();
 
     public bool Heal(float amount)
     {
@@ -171,12 +178,13 @@ public sealed class Player
         Health = MaxHealth;
         Shield = MaxShield;
         timeSinceDamage = ShieldRechargeDelay;
-        // Reset/restarts restore the default mission loadout. This intentionally recreates
-        // the starting MA5B Rifle and M6D Pistol only at level reset, not every frame/update,
-        // so dropped weapons stay removed from their slots until another weapon is picked up.
+        // Reset/restarts restore the default mission equipment. This intentionally recreates
+        // the starting weapons and resource counts only at level reset, not every frame/update,
+        // so dropped or consumed equipment stays removed until pickup or level restart.
         Equipment.ResetToDefaultMissionLoadout();
         weaponTracerRemaining = 0f;
         muzzleFlashRemaining = 0f;
+        ClearEquipmentMessage();
         UpdateCamera();
     }
 
@@ -197,6 +205,11 @@ public sealed class Player
         CurrentWeapon?.Update(deltaTime);
         weaponTracerRemaining = MathF.Max(0f, weaponTracerRemaining - deltaTime);
         muzzleFlashRemaining = MathF.Max(0f, muzzleFlashRemaining - deltaTime);
+        equipmentMessageRemaining = MathF.Max(0f, equipmentMessageRemaining - deltaTime);
+
+        if (Raylib.IsKeyPressed(KeyboardKey.H)) UseMedkit();
+        if (Raylib.IsKeyPressed(KeyboardKey.Q)) UseLethal();
+        if (Raylib.IsKeyPressed(KeyboardKey.C)) UseSpecial();
 
         if (Raylib.IsKeyPressed(KeyboardKey.One)) Equipment.EquipSlot(EquippedSlot.Primary);
         if (Raylib.IsKeyPressed(KeyboardKey.Two)) Equipment.EquipSlot(EquippedSlot.Secondary);
@@ -260,6 +273,49 @@ public sealed class Player
         velocity.Y -= Gravity * deltaTime;
         MoveAndCollide(level, deltaTime);
         UpdateCamera();
+    }
+
+    private void UseMedkit()
+    {
+        if (Equipment.MedkitCount <= 0)
+        {
+            ShowEquipmentMessage("NO MEDKITS");
+            return;
+        }
+
+        if (Health >= MaxHealth)
+        {
+            ShowEquipmentMessage("HEALTH FULL");
+            return;
+        }
+
+        if (Equipment.UseMedkit())
+        {
+            Heal(MedkitHealAmount);
+            ShowEquipmentMessage("MEDKIT USED");
+        }
+    }
+
+    private void UseLethal()
+    {
+        ShowEquipmentMessage(Equipment.UseLethal() ? "LETHAL USED" : "NO LETHAL AVAILABLE");
+    }
+
+    private void UseSpecial()
+    {
+        ShowEquipmentMessage(Equipment.UseSpecial() ? "SPECIAL USED" : "NO SPECIAL AVAILABLE");
+    }
+
+    private void ShowEquipmentMessage(string message)
+    {
+        EquipmentMessage = message;
+        equipmentMessageRemaining = EquipmentMessageTime;
+    }
+
+    private void ClearEquipmentMessage()
+    {
+        EquipmentMessage = null;
+        equipmentMessageRemaining = 0f;
     }
 
     private void ApplyWeaponKick()

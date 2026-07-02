@@ -78,10 +78,18 @@ public sealed class Hud
         RenderDebugInfo(player, livingEnemies, objectiveText);
         RenderPlayerStatus(player, screenWidth);
         RenderWeaponInfo(player, screenWidth, screenHeight);
+        RenderEquipmentInfo(player, screenWidth, screenHeight);
 
         if (player.CurrentWeapon?.IsReloading == true && matchState == MatchState.Playing)
         {
             Raylib.DrawText("RELOADING", centerX - 58, centerY + 34, 22, Color.Gold);
+        }
+
+        if (player.HasEquipmentMessage && matchState == MatchState.Playing)
+        {
+            string equipmentMessage = player.EquipmentMessage!;
+            int messageWidth = Raylib.MeasureText(equipmentMessage, 22);
+            Raylib.DrawText(equipmentMessage, centerX - messageWidth / 2, centerY + 90, 22, Color.Gold);
         }
 
         if (!string.IsNullOrWhiteSpace(interactionPrompt) && matchState == MatchState.Playing)
@@ -95,7 +103,7 @@ public sealed class Hud
             RenderMatchMessage(matchState, centerX, centerY, livingEnemies);
         }
 
-        Raylib.DrawText("WASD Move | Shift Sprint | Space Jump | Mouse Look | LMB Fire | R Reload | 1/2/3 Switch | E Interact | G Drop", Padding, screenHeight - 34, 20, Color.LightGray);
+        Raylib.DrawText("WASD | Shift Sprint | Space Jump | Mouse Look | LMB Fire | R Reload | 1/2/3 Switch | E Pickup | G Drop | H Medkit | Q Lethal | C Special", Padding, screenHeight - 34, 18, Color.LightGray);
     }
 
     private static void RenderDebugInfo(Player player, int livingEnemies, string objectiveText)
@@ -142,6 +150,26 @@ public sealed class Hud
         Raylib.DrawText($"Category: {weapon.Category} | {(weapon.IsAutomatic ? "Auto" : "Semi")}", x, y + lineHeight * 2, fontSize, Color.LightGray);
         Raylib.DrawText($"Magazine: {weapon.MagazineAmmo}/{weapon.MagazineSize}", x, y + lineHeight * 3, fontSize, Color.RayWhite);
         Raylib.DrawText($"Reserve: {weapon.ReserveAmmo} | {reloadState}", x, y + lineHeight * 4, fontSize, weapon.IsReloading ? Color.Gold : Color.LightGray);
+    }
+
+    private static void RenderEquipmentInfo(Player player, int screenWidth, int screenHeight)
+    {
+        const int lineHeight = 24;
+        const int fontSize = 18;
+        const int panelWidth = 300;
+        int x = screenWidth - panelWidth - Padding;
+        int y = screenHeight - Padding - 26 - lineHeight * 8;
+        Equipment equipment = player.Equipment;
+        string lethalText = equipment.LethalType == LethalType.None
+            ? "Lethal: None"
+            : $"Lethal: {equipment.LethalCount}/{Equipment.MaxLethals} {equipment.LethalType}";
+        string specialText = equipment.SpecialType == SpecialType.None
+            ? "Special: None"
+            : $"Special: {equipment.SpecialCount}/{Equipment.MaxSpecials} {equipment.SpecialType}";
+
+        Raylib.DrawText($"Medkits: {equipment.MedkitCount}/{Equipment.MaxMedkits}", x, y, fontSize, Color.LightGray);
+        Raylib.DrawText(lethalText, x, y + lineHeight, fontSize, Color.LightGray);
+        Raylib.DrawText(specialText, x, y + lineHeight * 2, fontSize, Color.LightGray);
     }
 
     private static void RenderBar(string label, float percent, int x, int y, int width, int height, Color fillColor, float damageFlash, float rechargePulse)
