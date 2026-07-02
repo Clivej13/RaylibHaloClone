@@ -21,8 +21,8 @@ public sealed class Player
     private const float Gravity = 22f;
     private const float MaxLookPitch = 88f;
     private const float MouseSensitivity = 0.10f;
-    private const float MaxHealth = 100f;
-    private const float MaxShield = 100f;
+    public const float MaxHealth = 100f;
+    public const float MaxShield = 100f;
     private const float ShieldRechargeDelay = 5f;
     private const float ShieldRechargeRate = 28f;
 

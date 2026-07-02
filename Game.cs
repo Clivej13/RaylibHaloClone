@@ -67,7 +67,7 @@ public sealed class Game : IDisposable
         player.UpdateLook(Raylib.GetMouseDelta());
         player.UpdateShieldRecharge(frameTime);
         CombatUpdateResult combatResult = player.UpdateCombat(enemies, frameTime);
-        hud.UpdateHitMarker(combatResult.Hit, frameTime);
+        hud.Update(player, combatResult.Hit, frameTime);
         weaponViewModel.Update(player.MovementBobSpeed, frameTime);
 
         if (combatResult.Fired)
@@ -108,7 +108,7 @@ public sealed class Game : IDisposable
         player.Reset(level.PlayerSpawnPosition);
         enemies.Clear();
         enemies.AddRange(CreateTestEnemies());
-        hud.Reset();
+        hud.Reset(player);
         accumulator = 0f;
         matchState = MatchState.Playing;
     }
