@@ -18,6 +18,14 @@ public enum SwitchState
     Used
 }
 
+public enum ModuleFacing
+{
+    North,
+    East,
+    South,
+    West
+}
+
 public sealed class Door
 {
     public Door(string name, Vector3 closedPosition, Vector3 size, Color closedColor, Color openColor)
@@ -43,16 +51,18 @@ public sealed class Door
 
 public sealed class InteractableSwitch : IInteractable
 {
-    public InteractableSwitch(SwitchType type, Vector3 position, Vector3 size)
+    public InteractableSwitch(SwitchType type, Vector3 position, Vector3 size, Vector3? faceDirection = null)
     {
         Type = type;
         Position = position;
         Size = size;
+        FaceDirection = MathUtils.SafeNormalize(faceDirection ?? -Vector3.UnitZ, -Vector3.UnitZ);
     }
 
     public SwitchType Type { get; }
     public Vector3 Position { get; }
     public Vector3 Size { get; }
+    public Vector3 FaceDirection { get; }
     public SwitchState State { get; private set; } = SwitchState.Off;
     public bool CanUse => State == SwitchState.Off;
     public float Radius => MathF.Max(Size.X, MathF.Max(Size.Y, Size.Z)) * 0.5f;
@@ -77,11 +87,105 @@ public sealed class InteractableSwitch : IInteractable
         Color buttonColor = State == SwitchState.Off ? Color.Red : Color.Green;
         Raylib.DrawCubeV(Position, Size, bodyColor);
         Raylib.DrawCubeWiresV(Position, Size, Color.Black);
-        Raylib.DrawCubeV(Position + new Vector3(0f, 0.15f, -0.27f), new Vector3(0.32f, 0.22f, 0.12f), buttonColor);
+
+        Vector3 buttonSize = MathF.Abs(FaceDirection.X) > MathF.Abs(FaceDirection.Z)
+            ? new Vector3(0.12f, 0.22f, 0.32f)
+            : new Vector3(0.32f, 0.22f, 0.12f);
+        Raylib.DrawCubeV(Position + FaceDirection * 0.27f + new Vector3(0f, 0.15f, 0f), buttonSize, buttonColor);
     }
 
     public void Activate() => State = SwitchState.Used;
     public void Reset() => State = SwitchState.Off;
+}
+
+
+public sealed class BoardingPodModule
+{
+    private const float Width = 6f;
+    private const float Depth = 5f;
+    private const float Height = 3.2f;
+    private const float WallThickness = 0.35f;
+    private const float FloorThickness = 0.1f;
+    private const float DoorWidth = 2.2f;
+    private const float SwitchInset = 0.08f;
+
+    private readonly List<(Vector3 Position, Vector3 Size)> solids = new();
+    private readonly List<(Vector3 Position, Vector3 Size)> detailCubes = new();
+
+    public BoardingPodModule(Vector3 origin, ModuleFacing facing)
+    {
+        Origin = origin;
+        Facing = facing;
+        ExitDirection = TransformDirection(Vector3.UnitZ);
+        SpawnPosition = TransformPoint(new Vector3(0f, 0f, -1.25f));
+        SpawnLookDirection = ExitDirection;
+        SwitchFaceDirection = TransformDirection(-Vector3.UnitX);
+        SwitchPosition = TransformPoint(new Vector3(Width / 2f - WallThickness - SwitchInset, 1.15f, -0.85f));
+        BuildGeometry();
+    }
+
+    public Vector3 Origin { get; }
+    public ModuleFacing Facing { get; }
+    public Vector3 SpawnPosition { get; }
+    public Vector3 SpawnLookDirection { get; }
+    public Vector3 ExitDirection { get; }
+    public Vector3 SwitchPosition { get; }
+    public Vector3 SwitchFaceDirection { get; }
+    public Vector3 SwitchSize => TransformSize(new Vector3(0.35f, 0.8f, 0.65f));
+    public IEnumerable<BoundingBox> CollisionBoxes => solids.Select(solid => Level.ToBoundingBox(solid.Position, solid.Size));
+
+    public Vector3 TransformPoint(Vector3 local) => Origin + TransformDirection(local);
+
+    public Vector3 TransformDirection(Vector3 local)
+    {
+        return Facing switch
+        {
+            ModuleFacing.North => local,
+            ModuleFacing.East => new Vector3(local.Z, local.Y, -local.X),
+            ModuleFacing.South => new Vector3(-local.X, local.Y, -local.Z),
+            ModuleFacing.West => new Vector3(-local.Z, local.Y, local.X),
+            _ => local
+        };
+    }
+
+    public Vector3 TransformSize(Vector3 localSize)
+    {
+        return Facing is ModuleFacing.East or ModuleFacing.West
+            ? new Vector3(localSize.Z, localSize.Y, localSize.X)
+            : localSize;
+    }
+
+    public void Render(Color wallColor, Color floorColor)
+    {
+        foreach (var cube in detailCubes)
+        {
+            Raylib.DrawCubeV(cube.Position, cube.Size, floorColor);
+            Raylib.DrawCubeWiresV(cube.Position, cube.Size, Color.DarkGray);
+        }
+
+        foreach (var solid in solids)
+        {
+            Raylib.DrawCubeV(solid.Position, solid.Size, wallColor);
+            Raylib.DrawCubeWiresV(solid.Position, solid.Size, Color.Black);
+        }
+    }
+
+    private void BuildGeometry()
+    {
+        AddDetail(new Vector3(0f, -FloorThickness / 2f, 0f), new Vector3(Width, FloorThickness, Depth));
+        AddSolid(new Vector3(0f, Height + WallThickness / 2f, 0f), new Vector3(Width, WallThickness, Depth));
+        AddSolid(new Vector3(0f, Height / 2f, -Depth / 2f + WallThickness / 2f), new Vector3(Width, Height, WallThickness));
+        AddSolid(new Vector3(-Width / 2f + WallThickness / 2f, Height / 2f, 0f), new Vector3(WallThickness, Height, Depth));
+        AddSolid(new Vector3(Width / 2f - WallThickness / 2f, Height / 2f, 0f), new Vector3(WallThickness, Height, Depth));
+
+        float sideSegmentWidth = (Width - DoorWidth) / 2f;
+        AddSolid(new Vector3(-Width / 2f + sideSegmentWidth / 2f, Height / 2f, Depth / 2f - WallThickness / 2f), new Vector3(sideSegmentWidth, Height, WallThickness));
+        AddSolid(new Vector3(Width / 2f - sideSegmentWidth / 2f, Height / 2f, Depth / 2f - WallThickness / 2f), new Vector3(sideSegmentWidth, Height, WallThickness));
+    }
+
+    private void AddSolid(Vector3 localPosition, Vector3 localSize) => solids.Add((TransformPoint(localPosition), TransformSize(localSize)));
+
+    private void AddDetail(Vector3 localPosition, Vector3 localSize) => detailCubes.Add((TransformPoint(localPosition), TransformSize(localSize)));
 }
 
 public sealed class Level
@@ -124,7 +228,8 @@ public sealed class Level
     // chord distance: 2 * 6.275 * sin(pi / 7) = ~5.45, so edge gap is ~3.05 after the 2.4m width.
     private const float ConsecutivePlatformGap = 2f * RingRadius * 0.4338837391f - PlatformSize;
 
-    public Vector3 PlayerSpawnPosition { get; } = new(0f, 0f, 8f);
+    public Vector3 PlayerSpawnPosition { get; }
+    public Vector3 PlayerSpawnLookDirection { get; }
     public Vector3 ExitPosition { get; } = new(0f, 0.95f, 16f);
     public Vector3 ExitSize { get; } = new(3f, 2.1f, 3f);
     public BoundingBox ExitBox => ToBoundingBox(ExitPosition, ExitSize);
@@ -143,15 +248,21 @@ public sealed class Level
     private readonly List<InteractableSwitch> switches = new();
     private readonly List<WorldInteractable> worldObjects = new();
     private readonly List<Vector3> lightFixtures = new();
+    private readonly BoardingPodModule boardingPod;
 
     public Level()
     {
+        boardingPod = new BoardingPodModule(new Vector3(-18f, 0f, -18f), ModuleFacing.North);
+        PlayerSpawnPosition = boardingPod.SpawnPosition;
+        PlayerSpawnLookDirection = boardingPod.SpawnLookDirection;
+
         AddWall(new Vector3(0f, WallHeight / 2f, -ArenaHalfSize), new Vector3(ArenaHalfSize * 2f, WallHeight, WallThickness));
         AddWall(new Vector3(0f, WallHeight / 2f, ArenaHalfSize), new Vector3(ArenaHalfSize * 2f, WallHeight, WallThickness));
         AddWall(new Vector3(-ArenaHalfSize, WallHeight / 2f, 0f), new Vector3(WallThickness, WallHeight, ArenaHalfSize * 2f));
         AddWall(new Vector3(ArenaHalfSize, WallHeight / 2f, 0f), new Vector3(WallThickness, WallHeight, ArenaHalfSize * 2f));
 
         BuildPlatformingRoute();
+        foreach (BoundingBox box in boardingPod.CollisionBoxes) collisionBoxes.Add(box);
         BuildInteractiveObjects();
     }
 
@@ -201,6 +312,7 @@ public sealed class Level
         Raylib.DrawPlane(Vector3.Zero, new Vector2(ArenaHalfSize * 2f, ArenaHalfSize * 2f), floorColor);
         RenderSpawnPoint();
         RenderExitZone(exitActive);
+        boardingPod.Render(wallColor, floorColor);
 
         foreach (var wall in walls)
         {
@@ -255,6 +367,7 @@ public sealed class Level
         doors.Add(new Door("Security Door", new Vector3(-8f, 1.25f, -2f), new Vector3(4f, 2.5f, 0.45f), new Color(120, 76, 58, 255), new Color(72, 130, 84, 130)));
         doors.Add(new Door("Powered Door", new Vector3(8f, 1.25f, -2f), new Vector3(4f, 2.5f, 0.45f), new Color(92, 54, 54, 255), new Color(72, 130, 190, 130)));
 
+        switches.Add(new InteractableSwitch(SwitchType.Lights, boardingPod.SwitchPosition, boardingPod.SwitchSize, boardingPod.SwitchFaceDirection));
         switches.Add(new InteractableSwitch(SwitchType.Lights, new Vector3(-15f, 0.55f, 8f), new Vector3(0.8f, 1.1f, 0.45f)));
         switches.Add(new InteractableSwitch(SwitchType.DoorOpen, new Vector3(-11f, 0.55f, -2f), new Vector3(0.8f, 1.1f, 0.45f)));
         switches.Add(new InteractableSwitch(SwitchType.PoweredDoor, new Vector3(11f, 0.55f, -2f), new Vector3(0.8f, 1.1f, 0.45f)));

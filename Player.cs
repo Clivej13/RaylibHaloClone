@@ -45,9 +45,10 @@ public sealed class Player
     private float equipmentMessageRemaining;
 
 
-    public Player(Vector3 spawnPosition)
+    public Player(Vector3 spawnPosition, Vector3? spawnLookDirection = null)
     {
         position = spawnPosition;
+        SetLookDirection(spawnLookDirection ?? Vector3.UnitZ);
         Health = MaxHealth;
         Shield = MaxShield;
         Vector3 cameraPosition = GetCameraPosition();
@@ -170,9 +171,10 @@ public sealed class Player
         }
     }
 
-    public void Reset(Vector3 spawnPosition)
+    public void Reset(Vector3 spawnPosition, Vector3? spawnLookDirection = null)
     {
         position = spawnPosition;
+        SetLookDirection(spawnLookDirection ?? Vector3.UnitZ);
         velocity = Vector3.Zero;
         grounded = false;
         Health = MaxHealth;
@@ -478,6 +480,14 @@ public sealed class Player
         Vector3 min = new(feetPosition.X - Radius, feetPosition.Y, feetPosition.Z - Radius);
         Vector3 max = new(feetPosition.X + Radius, feetPosition.Y + Height, feetPosition.Z + Radius);
         return new BoundingBox(min, max);
+    }
+
+
+    private void SetLookDirection(Vector3 direction)
+    {
+        Vector3 flatDirection = MathUtils.SafeNormalize(MathUtils.Flatten(direction), Vector3.UnitZ);
+        yaw = MathF.Atan2(flatDirection.X, flatDirection.Z) / MathUtils.Deg2Rad;
+        pitch = 0f;
     }
 
     private Vector3 GetCameraPosition() => position + new Vector3(0f, EyeHeight, 0f);

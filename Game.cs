@@ -37,7 +37,7 @@ public sealed class Game : IDisposable
         Raylib.DisableCursor();
 
         level = new Level();
-        player = new Player(level.PlayerSpawnPosition);
+        player = new Player(level.PlayerSpawnPosition, level.PlayerSpawnLookDirection);
         hud = new Hud();
         enemies = CreateTestEnemies();
         weaponViewModel = new WeaponViewModel();
@@ -109,7 +109,7 @@ public sealed class Game : IDisposable
 
     private void ResetLevel()
     {
-        player.Reset(level.PlayerSpawnPosition);
+        player.Reset(level.PlayerSpawnPosition, level.PlayerSpawnLookDirection);
         enemies.Clear();
         enemies.AddRange(CreateTestEnemies());
         hud.Reset(player);

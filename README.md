@@ -43,7 +43,7 @@ dotnet run -c Debug
 ## Current Features
 
 - **FPS movement**: first-person WASD movement, mouse look, sprinting, and jumping.
-- **Collision and platforming**: player collision against arena bounds, walls, doors, cover, and a raised platforming route.
+- **Collision and platforming**: player collision against arena bounds, walls, doors, cover, a reusable boarding pod module, and a raised platforming route.
 - **Combat**: hitscan rifle, shotgun, and pistol firing with enemy hit detection, tracer feedback, muzzle flash, and recoil/kick.
 - **Weapon ammo and reload**: magazine ammo, reserve ammo, reload timing, safe unarmed input handling, and HUD reload status.
 - **Equipment resources**: stackable medkits, lethal equipment storage, and special equipment storage with HUD counts and placeholder use feedback.
@@ -51,7 +51,7 @@ dotnet run -c Debug
 - **Enemy AI and combat**: enemies detect the player, move, strafe, check line of sight, aim, attack, take damage, and flash when hit.
 - **HUD**: crosshair, FPS/debug info, position/speed, objective text, enemy count, shield/health bars, weapon/ammo panel, reload status, hit marker, damage overlays, interaction prompts, and victory/defeat messaging.
 - **Objectives**: eliminate all targets, activate the extraction switch, then move into the extraction zone.
-- **Switches, doors, and lights**: light switch, security door switch, powered door switch, extraction switch, doors, lights, and light fixtures are all represented in the level.
+- **Switches, doors, and lights**: light switch, boarding pod wall switch, security door switch, powered door switch, extraction switch, doors, lights, and light fixtures are all represented in the level.
 - **Extraction, victory, defeat, and reset**: reaching the active extraction zone after completing objectives triggers victory; death triggers defeat; Enter resets the level.
 - **Interactable pickup system**: switches, pickups, and dropped objects use a shared interactable model with position, bounds, display text, active/consumed state, rendering, and interaction behavior.
 - **Crosshair interactions**: interactions are selected by camera position and look direction, require the object to be under the crosshair, and use a short activation distance.
@@ -76,6 +76,10 @@ Additional equipment:
 - **Special equipment slot**: placeholder foundation with **0/1** by default and no special behaviour yet. Press **C** to attempt use; empty special storage shows `NO SPECIAL AVAILABLE`.
 
 The default mission loadout is an **MA5B Rifle** in Primary, an empty Secondary slot, an **M6D Pistol** in Sidearm, **1/3 Medkits**, **0/2 Lethals**, and **0/1 Special**. Weapon pickups go into their category-matched slot. If that slot is empty, the pickup is stored and equipped there; if it is full, the pickup replaces that slot and drops the old weapon nearby using the existing no-overlap placement rules. Restarting after victory or defeat restores the default mission loadout, so weapons and equipment used or dropped during a run reset only when the level restarts.
+
+## Level Modules
+
+- The first reusable boarding pod module has been added in one arena corner. It is built from simple cube geometry, includes an aligned floor, roof, walls, exit opening, side-wall switch, and player spawn facing the exit, and is placed without replacing the current arena or objectives.
 
 ## Gameplay Loop
 
