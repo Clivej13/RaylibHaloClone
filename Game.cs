@@ -14,7 +14,7 @@ public sealed class Game : IDisposable
 {
     private const int ScreenWidth = 1280;
     private const int ScreenHeight = 720;
-    private const string WindowTitle = "Halo-Inspired FPS Prototype - Phase 1";
+    private const string WindowTitle = "Halo-Inspired FPS Prototype";
     private const float FixedTimeStep = 1f / 60f;
     private const float MaxFrameTime = 0.25f;
 
@@ -27,7 +27,7 @@ public sealed class Game : IDisposable
     private bool disposed;
     private MatchState matchState = MatchState.Playing;
     private bool eliminateTargetsObjectiveComplete;
-    private InteractableSwitch? nearbyUsableSwitch;
+    private IInteractable? selectedInteractable;
 
     public Game()
     {
@@ -116,7 +116,7 @@ public sealed class Game : IDisposable
         accumulator = 0f;
         matchState = MatchState.Playing;
         eliminateTargetsObjectiveComplete = false;
-        nearbyUsableSwitch = null;
+        selectedInteractable = null;
         level.ResetInteractiveState();
     }
 
@@ -140,18 +140,49 @@ public sealed class Game : IDisposable
         Raylib.EndMode3D();
 
         weaponViewModel.Render(player.HasMuzzleFlash, player.MuzzleFlashIntensity);
-        hud.Render(player, enemies.Count(enemy => enemy.IsAlive), matchState, GetObjectiveText(), nearbyUsableSwitch is not null);
+        hud.Render(player, enemies.Count(enemy => enemy.IsAlive), matchState, GetObjectiveText(), selectedInteractable?.GetPrompt(player));
         Raylib.EndDrawing();
     }
 
     private void UpdateInteraction()
     {
-        nearbyUsableSwitch = level.GetUsableSwitchNear(player.Position);
-        if (nearbyUsableSwitch is not null && Raylib.IsKeyPressed(KeyboardKey.E))
+        selectedInteractable = GetCrosshairInteractable();
+        if (selectedInteractable is not null && Raylib.IsKeyPressed(KeyboardKey.E))
         {
-            level.ActivateSwitch(nearbyUsableSwitch);
-            nearbyUsableSwitch = level.GetUsableSwitchNear(player.Position);
+            selectedInteractable.Interact(player, level);
+            selectedInteractable = GetCrosshairInteractable();
         }
+
+        if (Raylib.IsKeyPressed(KeyboardKey.G))
+        {
+            level.DropWeapon(player, player.DropCurrentWeapon());
+            selectedInteractable = GetCrosshairInteractable();
+        }
+    }
+
+    private IInteractable? GetCrosshairInteractable()
+    {
+        const float maxActivationDistance = 2.85f;
+        Ray ray = new(player.CameraPosition, Vector3.Normalize(player.LookDirection));
+        IInteractable? closest = null;
+        float closestDistance = maxActivationDistance;
+
+        foreach (IInteractable interactable in level.Interactables)
+        {
+            if (!interactable.IsActive || !interactable.CanInteract(player))
+            {
+                continue;
+            }
+
+            RayCollision collision = Raylib.GetRayCollisionBox(ray, interactable.Bounds);
+            if (collision.Hit && collision.Distance <= closestDistance)
+            {
+                closest = interactable;
+                closestDistance = collision.Distance;
+            }
+        }
+
+        return closest;
     }
 
     private string GetObjectiveText()

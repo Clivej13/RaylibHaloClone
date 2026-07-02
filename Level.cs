@@ -41,7 +41,7 @@ public sealed class Door
     public void Reset() => IsOpen = false;
 }
 
-public sealed class InteractableSwitch
+public sealed class InteractableSwitch : IInteractable
 {
     public InteractableSwitch(SwitchType type, Vector3 position, Vector3 size)
     {
@@ -55,6 +55,30 @@ public sealed class InteractableSwitch
     public Vector3 Size { get; }
     public SwitchState State { get; private set; } = SwitchState.Off;
     public bool CanUse => State == SwitchState.Off;
+    public float Radius => MathF.Max(Size.X, MathF.Max(Size.Y, Size.Z)) * 0.5f;
+    public string DisplayName => Type switch
+    {
+        SwitchType.ExitActivation => "extraction switch",
+        SwitchType.DoorOpen => "security door switch",
+        SwitchType.PoweredDoor => "powered door switch",
+        SwitchType.Lights => "light switch",
+        _ => "switch"
+    };
+    public bool IsActive => CanUse;
+    public BoundingBox Bounds => Level.ToBoundingBox(Position, Size);
+
+    public string GetPrompt(Player player) => $"Press E to activate {DisplayName}";
+    public bool CanInteract(Player player) => CanUse;
+    public void Interact(Player player, Level level) => level.ActivateSwitch(this);
+
+    public void Render()
+    {
+        Color bodyColor = State == SwitchState.Off ? new Color(76, 82, 92, 255) : new Color(48, 120, 74, 255);
+        Color buttonColor = State == SwitchState.Off ? Color.Red : Color.Green;
+        Raylib.DrawCubeV(Position, Size, bodyColor);
+        Raylib.DrawCubeWiresV(Position, Size, Color.Black);
+        Raylib.DrawCubeV(Position + new Vector3(0f, 0.15f, -0.27f), new Vector3(0.32f, 0.22f, 0.12f), buttonColor);
+    }
 
     public void Activate() => State = SwitchState.Used;
     public void Reset() => State = SwitchState.Off;
@@ -105,6 +129,7 @@ public sealed class Level
     public Vector3 ExitSize { get; } = new(3f, 2.1f, 3f);
     public BoundingBox ExitBox => ToBoundingBox(ExitPosition, ExitSize);
     public IReadOnlyList<InteractableSwitch> Switches => switches;
+    public IEnumerable<IInteractable> Interactables => switches.Cast<IInteractable>().Concat(worldObjects.Where(obj => obj.IsActive));
     public IReadOnlyList<Door> Doors => doors;
     public bool ExitSwitchActivated { get; private set; }
     public bool LightsOn { get; private set; }
@@ -116,6 +141,7 @@ public sealed class Level
     private readonly List<(Vector3 Position, Vector3 Size)> walls = new();
     private readonly List<Door> doors = new();
     private readonly List<InteractableSwitch> switches = new();
+    private readonly List<WorldInteractable> worldObjects = new();
     private readonly List<Vector3> lightFixtures = new();
 
     public Level()
@@ -130,9 +156,6 @@ public sealed class Level
     }
 
     public Color BackgroundColor => LightsOn ? new Color(16, 18, 24, 255) : new Color(6, 8, 13, 255);
-
-    public InteractableSwitch? GetUsableSwitchNear(Vector3 playerPosition) =>
-        switches.FirstOrDefault(sw => sw.CanUse && Vector3.Distance(MathUtils.Flatten(sw.Position), MathUtils.Flatten(playerPosition)) <= 2.1f);
 
     public void ActivateSwitch(InteractableSwitch interactableSwitch)
     {
@@ -165,6 +188,8 @@ public sealed class Level
         LightsOn = false;
         foreach (Door door in doors) door.Reset();
         foreach (InteractableSwitch interactableSwitch in switches) interactableSwitch.Reset();
+        worldObjects.Clear();
+        AddInitialPickups();
     }
 
     public void Render(bool exitActive)
@@ -198,6 +223,7 @@ public sealed class Level
 
         RenderDoors();
         RenderSwitches();
+        RenderWorldObjects();
         RenderLightFixtures();
 
         Raylib.DrawGrid((int)ArenaHalfSize * 2, 1f);
@@ -233,8 +259,63 @@ public sealed class Level
         switches.Add(new InteractableSwitch(SwitchType.DoorOpen, new Vector3(-11f, 0.55f, -2f), new Vector3(0.8f, 1.1f, 0.45f)));
         switches.Add(new InteractableSwitch(SwitchType.PoweredDoor, new Vector3(11f, 0.55f, -2f), new Vector3(0.8f, 1.1f, 0.45f)));
         switches.Add(new InteractableSwitch(SwitchType.ExitActivation, new Vector3(3.5f, 0.55f, 15f), new Vector3(0.8f, 1.1f, 0.45f)));
+        AddInitialPickups();
 
         lightFixtures.AddRange([new Vector3(-10f, 4.6f, -10f), new Vector3(0f, 4.6f, 0f), new Vector3(10f, 4.6f, 10f)]);
+    }
+
+
+    public void DropWeapon(Player player, Weapon weapon)
+    {
+        Vector3 flatLook = MathUtils.Flatten(player.LookDirection);
+        if (flatLook.LengthSquared() < 0.001f) flatLook = Vector3.UnitZ;
+        Vector3 preferred = player.Position + Vector3.Normalize(flatLook) * 1.35f + new Vector3(0f, 0.35f, 0f);
+        Vector3 clearPosition = FindClearObjectPosition(preferred, new Vector3(1.05f, 0.25f, 0.35f));
+        worldObjects.Add(new WeaponPickup(clearPosition, weapon));
+    }
+
+    private void AddInitialPickups()
+    {
+        AddWorldObject(new HealthPackPickup(new Vector3(-5f, 0.25f, 6f)));
+        AddWorldObject(new WeaponPickup(new Vector3(5f, 0.35f, 6f), Weapon.CreateRifle()));
+    }
+
+    private void AddWorldObject(WorldInteractable worldObject)
+    {
+        Vector3 clearPosition = FindClearObjectPosition(worldObject.Position, worldObject.Size);
+        if (clearPosition != worldObject.Position)
+        {
+            worldObject = worldObject switch
+            {
+                HealthPackPickup => new HealthPackPickup(clearPosition),
+                WeaponPickup weaponPickup => new WeaponPickup(clearPosition, weaponPickup.Weapon),
+                _ => worldObject
+            };
+        }
+
+        worldObjects.Add(worldObject);
+    }
+
+    private Vector3 FindClearObjectPosition(Vector3 preferredPosition, Vector3 size)
+    {
+        Vector3[] offsets =
+        [
+            Vector3.Zero, new Vector3(0.8f, 0f, 0f), new Vector3(-0.8f, 0f, 0f),
+            new Vector3(0f, 0f, 0.8f), new Vector3(0f, 0f, -0.8f),
+            new Vector3(1.1f, 0f, 1.1f), new Vector3(-1.1f, 0f, 1.1f),
+            new Vector3(1.1f, 0f, -1.1f), new Vector3(-1.1f, 0f, -1.1f)
+        ];
+
+        foreach (Vector3 offset in offsets)
+        {
+            Vector3 candidate = ClampToArena(preferredPosition + offset, MathF.Max(size.X, size.Z) * 0.5f);
+            BoundingBox candidateBox = ToBoundingBox(candidate, size);
+            if (CollisionBoxes.Any(box => Raylib.CheckCollisionBoxes(candidateBox, box))) continue;
+            if (Interactables.Any(obj => Raylib.CheckCollisionBoxes(candidateBox, obj.Bounds))) continue;
+            return candidate;
+        }
+
+        return ClampToArena(preferredPosition, MathF.Max(size.X, size.Z) * 0.5f);
     }
 
     private void RenderDoors()
@@ -251,11 +332,15 @@ public sealed class Level
     {
         foreach (InteractableSwitch interactableSwitch in switches)
         {
-            Color bodyColor = interactableSwitch.State == SwitchState.Off ? new Color(76, 82, 92, 255) : new Color(48, 120, 74, 255);
-            Color buttonColor = interactableSwitch.State == SwitchState.Off ? Color.Red : Color.Green;
-            Raylib.DrawCubeV(interactableSwitch.Position, interactableSwitch.Size, bodyColor);
-            Raylib.DrawCubeWiresV(interactableSwitch.Position, interactableSwitch.Size, Color.Black);
-            Raylib.DrawCubeV(interactableSwitch.Position + new Vector3(0f, 0.15f, -0.27f), new Vector3(0.32f, 0.22f, 0.12f), buttonColor);
+            interactableSwitch.Render();
+        }
+    }
+
+    private void RenderWorldObjects()
+    {
+        foreach (WorldInteractable worldObject in worldObjects)
+        {
+            worldObject.Render();
         }
     }
 
