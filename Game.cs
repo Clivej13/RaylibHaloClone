@@ -27,6 +27,7 @@ public sealed class Game : IDisposable
     private bool disposed;
     private MatchState matchState = MatchState.Playing;
     private bool eliminateTargetsObjectiveComplete;
+    private InteractableSwitch? nearbyUsableSwitch;
 
     public Game()
     {
@@ -70,6 +71,7 @@ public sealed class Game : IDisposable
         CombatUpdateResult combatResult = player.UpdateCombat(enemies, frameTime);
         hud.Update(player, combatResult.Hit, frameTime);
         weaponViewModel.Update(player.MovementBobSpeed, frameTime);
+        UpdateInteraction();
 
         if (combatResult.Fired)
         {
@@ -99,7 +101,7 @@ public sealed class Game : IDisposable
         }
 
         eliminateTargetsObjectiveComplete = enemies.All(enemy => !enemy.IsAlive);
-        if (eliminateTargetsObjectiveComplete && IsPlayerFullyInsideExit(player))
+        if (eliminateTargetsObjectiveComplete && level.ExitSwitchActivated && IsPlayerFullyInsideExit(player))
         {
             matchState = MatchState.Victory;
         }
@@ -114,15 +116,17 @@ public sealed class Game : IDisposable
         accumulator = 0f;
         matchState = MatchState.Playing;
         eliminateTargetsObjectiveComplete = false;
+        nearbyUsableSwitch = null;
+        level.ResetInteractiveState();
     }
 
     private void Render()
     {
         Raylib.BeginDrawing();
-        Raylib.ClearBackground(new Color(16, 18, 24, 255));
+        Raylib.ClearBackground(level.BackgroundColor);
 
         Raylib.BeginMode3D(player.Camera);
-        level.Render(eliminateTargetsObjectiveComplete);
+        level.Render(eliminateTargetsObjectiveComplete && level.ExitSwitchActivated);
         foreach (Enemy enemy in enemies)
         {
             enemy.Render();
@@ -136,8 +140,30 @@ public sealed class Game : IDisposable
         Raylib.EndMode3D();
 
         weaponViewModel.Render(player.HasMuzzleFlash, player.MuzzleFlashIntensity);
-        hud.Render(player, enemies.Count(enemy => enemy.IsAlive), matchState, eliminateTargetsObjectiveComplete);
+        hud.Render(player, enemies.Count(enemy => enemy.IsAlive), matchState, GetObjectiveText(), nearbyUsableSwitch is not null);
         Raylib.EndDrawing();
+    }
+
+    private void UpdateInteraction()
+    {
+        nearbyUsableSwitch = level.GetUsableSwitchNear(player.Position);
+        if (nearbyUsableSwitch is not null && Raylib.IsKeyPressed(KeyboardKey.E))
+        {
+            level.ActivateSwitch(nearbyUsableSwitch);
+            nearbyUsableSwitch = level.GetUsableSwitchNear(player.Position);
+        }
+    }
+
+    private string GetObjectiveText()
+    {
+        if (!eliminateTargetsObjectiveComplete)
+        {
+            return "Objective: Eliminate all targets";
+        }
+
+        return level.ExitSwitchActivated
+            ? "Objective complete: Proceed to extraction"
+            : "Objective: Activate extraction switch";
     }
 
     private bool IsPlayerFullyInsideExit(Player player) => ContainsPlayerBox(level.ExitBox, player.CollisionBox);
