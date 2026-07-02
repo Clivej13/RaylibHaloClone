@@ -60,7 +60,7 @@ public sealed class Hud
         previousHealth = player.Health;
     }
 
-    public void Render(Player player, int livingEnemies, MatchState matchState)
+    public void Render(Player player, int livingEnemies, MatchState matchState, bool eliminateTargetsObjectiveComplete)
     {
         int screenWidth = Raylib.GetScreenWidth();
         int screenHeight = Raylib.GetScreenHeight();
@@ -75,7 +75,7 @@ public sealed class Hud
             RenderHitMarker(centerX, centerY);
         }
 
-        RenderDebugInfo(player, livingEnemies);
+        RenderDebugInfo(player, livingEnemies, eliminateTargetsObjectiveComplete);
         RenderPlayerStatus(player, screenWidth);
         RenderWeaponInfo(player, screenWidth, screenHeight);
 
@@ -92,12 +92,18 @@ public sealed class Hud
         Raylib.DrawText("WASD Move | Shift Sprint | Space Jump | Mouse Look | LMB Fire | R Reload", Padding, screenHeight - 34, 20, Color.LightGray);
     }
 
-    private static void RenderDebugInfo(Player player, int livingEnemies)
+    private static void RenderDebugInfo(Player player, int livingEnemies, bool eliminateTargetsObjectiveComplete)
     {
+        string objectiveText = eliminateTargetsObjectiveComplete
+            ? "Objective complete: Proceed to extraction"
+            : "Objective: Eliminate all targets";
+        Color objectiveColor = eliminateTargetsObjectiveComplete ? Color.SkyBlue : Color.RayWhite;
+
         Raylib.DrawFPS(Padding, Padding);
         Raylib.DrawText($"Position: {player.Position.X,6:0.00}, {player.Position.Y,5:0.00}, {player.Position.Z,6:0.00}", Padding, Padding + 32, 20, Color.RayWhite);
         Raylib.DrawText($"Speed: {player.CurrentHorizontalSpeed:0.00} m/s", Padding, Padding + 58, 20, Color.RayWhite);
         Raylib.DrawText($"Targets: {livingEnemies}", Padding, Padding + 84, 20, Color.RayWhite);
+        Raylib.DrawText(objectiveText, Padding, Padding + 110, 20, objectiveColor);
     }
 
     private void RenderPlayerStatus(Player player, int screenWidth)
@@ -183,7 +189,7 @@ public sealed class Hud
     {
         bool victory = matchState == MatchState.Victory;
         string title = victory ? "VICTORY" : "DEFEATED";
-        string subtitle = victory ? "All targets eliminated" : "Armor systems offline";
+        string subtitle = victory ? "Extraction complete" : "Armor systems offline";
         string detail = victory ? "Arena secure" : $"Targets remaining: {livingEnemies}";
         Color accent = victory ? Color.Gold : Rgba(255, 80, 80, 255);
 

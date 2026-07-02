@@ -26,6 +26,7 @@ public sealed class Game : IDisposable
     private float accumulator;
     private bool disposed;
     private MatchState matchState = MatchState.Playing;
+    private bool eliminateTargetsObjectiveComplete;
 
     public Game()
     {
@@ -97,7 +98,8 @@ public sealed class Game : IDisposable
             return;
         }
 
-        if (enemies.All(enemy => !enemy.IsAlive))
+        eliminateTargetsObjectiveComplete = enemies.All(enemy => !enemy.IsAlive);
+        if (eliminateTargetsObjectiveComplete && IsPlayerFullyInsideExit(player))
         {
             matchState = MatchState.Victory;
         }
@@ -111,6 +113,7 @@ public sealed class Game : IDisposable
         hud.Reset(player);
         accumulator = 0f;
         matchState = MatchState.Playing;
+        eliminateTargetsObjectiveComplete = false;
     }
 
     private void Render()
@@ -119,7 +122,7 @@ public sealed class Game : IDisposable
         Raylib.ClearBackground(new Color(16, 18, 24, 255));
 
         Raylib.BeginMode3D(player.Camera);
-        level.Render();
+        level.Render(eliminateTargetsObjectiveComplete);
         foreach (Enemy enemy in enemies)
         {
             enemy.Render();
@@ -133,9 +136,16 @@ public sealed class Game : IDisposable
         Raylib.EndMode3D();
 
         weaponViewModel.Render(player.HasMuzzleFlash, player.MuzzleFlashIntensity);
-        hud.Render(player, enemies.Count(enemy => enemy.IsAlive), matchState);
+        hud.Render(player, enemies.Count(enemy => enemy.IsAlive), matchState, eliminateTargetsObjectiveComplete);
         Raylib.EndDrawing();
     }
+
+    private bool IsPlayerFullyInsideExit(Player player) => ContainsPlayerBox(level.ExitBox, player.CollisionBox);
+
+    private static bool ContainsPlayerBox(BoundingBox exitBox, BoundingBox playerBox) =>
+        playerBox.Min.X > exitBox.Min.X && playerBox.Max.X < exitBox.Max.X &&
+        playerBox.Min.Y > exitBox.Min.Y && playerBox.Max.Y < exitBox.Max.Y &&
+        playerBox.Min.Z > exitBox.Min.Z && playerBox.Max.Z < exitBox.Max.Z;
 
     private static List<Enemy> CreateTestEnemies() =>
     [
