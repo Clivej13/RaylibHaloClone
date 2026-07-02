@@ -14,6 +14,11 @@ public sealed class Level
     private static readonly Color CoverColor = new(100, 111, 128, 255);
     private static readonly Color RoutePlatformColor = new(88, 132, 190, 255);
     private static readonly Color FinalPlatformColor = new(190, 142, 64, 255);
+    private static readonly Color SpawnMarkerColor = new(88, 190, 118, 165);
+    private static readonly Color InactiveExitFillColor = new(115, 72, 72, 55);
+    private static readonly Color InactiveExitWireColor = new(170, 82, 82, 255);
+    private static readonly Color ActiveExitFillColor = new(60, 220, 210, 75);
+    private static readonly Color ActiveExitWireColor = new(100, 255, 220, 255);
 
     private const int PlatformCount = 7;
     private const float CentralPlatformSize = 2.8f;
@@ -36,6 +41,9 @@ public sealed class Level
     private const float ConsecutivePlatformGap = 2f * RingRadius * 0.4338837391f - PlatformSize;
 
     public Vector3 PlayerSpawnPosition { get; } = new(0f, 0f, 8f);
+    public Vector3 ExitPosition { get; } = new(0f, 0.95f, 16f);
+    public Vector3 ExitSize { get; } = new(3f, 2.1f, 3f);
+    public BoundingBox ExitBox => ToBoundingBox(ExitPosition, ExitSize);
     public IReadOnlyList<BoundingBox> CollisionBoxes => collisionBoxes;
 
     private readonly List<BoundingBox> collisionBoxes = new();
@@ -53,9 +61,11 @@ public sealed class Level
         BuildPlatformingRoute();
     }
 
-    public void Render()
+    public void Render(bool exitActive)
     {
         Raylib.DrawPlane(Vector3.Zero, new Vector2(ArenaHalfSize * 2f, ArenaHalfSize * 2f), FloorColor);
+        RenderSpawnPoint();
+        RenderExitZone(exitActive);
 
         foreach (var wall in walls)
         {
@@ -77,6 +87,22 @@ public sealed class Level
         }
 
         Raylib.DrawGrid((int)ArenaHalfSize * 2, 1f);
+    }
+
+    private void RenderSpawnPoint()
+    {
+        Raylib.DrawCylinder(PlayerSpawnPosition + new Vector3(0f, 0.025f, 0f), 0.65f, 0.65f, 0.05f, 24, SpawnMarkerColor);
+        Raylib.DrawCylinderWires(PlayerSpawnPosition + new Vector3(0f, 0.035f, 0f), 0.65f, 0.65f, 0.07f, 24, Color.Green);
+    }
+
+    private void RenderExitZone(bool active)
+    {
+        Color fillColor = active ? ActiveExitFillColor : InactiveExitFillColor;
+        Color wireColor = active ? ActiveExitWireColor : InactiveExitWireColor;
+
+        Raylib.DrawCubeV(ExitPosition, ExitSize, fillColor);
+        Raylib.DrawCubeWiresV(ExitPosition, ExitSize, wireColor);
+        Raylib.DrawCubeWiresV(ExitPosition, ExitSize + new Vector3(0.08f), wireColor);
     }
 
     public Vector3 ClampToArena(Vector3 position, float radius)

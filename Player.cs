@@ -53,6 +53,7 @@ public sealed class Player
 
     public Camera3D Camera { get; private set; }
     public Vector3 Position => position;
+    public BoundingBox CollisionBox => CreatePlayerBox(position);
     public Vector3 LookDirection => Forward;
     public Vector3 CameraPosition => GetCameraPosition();
     public Weapon CurrentWeapon { get; } = Weapon.CreateRifle();
@@ -357,7 +358,7 @@ public sealed class Player
             : previousPosition.Z - Radius >= box.Max.Z - CollisionSkin && currentPosition.Z - Radius < box.Max.Z;
     }
 
-    private BoundingBox CreatePlayerBox(Vector3 feetPosition)
+    private static BoundingBox CreatePlayerBox(Vector3 feetPosition)
     {
         Vector3 min = new(feetPosition.X - Radius, feetPosition.Y, feetPosition.Z - Radius);
         Vector3 max = new(feetPosition.X + Radius, feetPosition.Y + Height, feetPosition.Z + Radius);
