@@ -122,26 +122,21 @@ public sealed class Player
 
     public Weapon? PickUpWeapon(Weapon newWeapon)
     {
-        if (Equipment.PrimaryWeapon is null)
+        EquippedSlot matchingSlot = Equipment.GetSlotForCategory(newWeapon.Category);
+        Weapon? previousWeapon = Equipment.GetWeapon(matchingSlot);
+
+        if (previousWeapon is null)
         {
-            Equipment.PrimaryWeapon = newWeapon;
-            Equipment.EquipSlot(EquippedSlot.Primary);
+            Equipment.SetWeapon(matchingSlot, newWeapon);
+            Equipment.EquipSlot(matchingSlot);
             return null;
         }
 
-        if (Equipment.SecondaryWeapon is null)
-        {
-            Equipment.SecondaryWeapon = newWeapon;
-            Equipment.EquipSlot(EquippedSlot.Secondary);
-            return null;
-        }
-
-        EquippedSlot swapSlot = Equipment.EquippedSlot == EquippedSlot.Sidearm
-            ? EquippedSlot.Primary
-            : Equipment.EquippedSlot;
-        Equipment.EquipSlot(swapSlot);
-        Weapon? swappedWeapon = Equipment.SetWeapon(swapSlot, newWeapon);
-        return swappedWeapon;
+        // If the relevant slot is full, keep the rule deterministic: replace the
+        // category-matched slot and return its previous weapon so the pickup system
+        // can drop it nearby. When that slot is currently equipped, this is a direct
+        // swap with the visible weapon; otherwise the equipped slot is left unchanged.
+        return Equipment.SetWeapon(matchingSlot, newWeapon);
     }
 
     public Weapon? DropCurrentWeapon()
@@ -176,9 +171,9 @@ public sealed class Player
         Health = MaxHealth;
         Shield = MaxShield;
         timeSinceDamage = ShieldRechargeDelay;
-        // Reset/restarters restore the default mission loadout. This intentionally recreates
-        // the starting MA5B Rifle only at level reset, not every frame/update, so dropping
-        // the rifle during play leaves the player unarmed until another weapon is picked up.
+        // Reset/restarts restore the default mission loadout. This intentionally recreates
+        // the starting MA5B Rifle and M6D Pistol only at level reset, not every frame/update,
+        // so dropped weapons stay removed from their slots until another weapon is picked up.
         Equipment.ResetToDefaultMissionLoadout();
         weaponTracerRemaining = 0f;
         muzzleFlashRemaining = 0f;
@@ -213,7 +208,15 @@ public sealed class Player
             currentWeapon?.Reload();
         }
 
-        if (currentWeapon is null || !Raylib.IsMouseButtonDown(MouseButton.Left))
+        if (currentWeapon is null)
+        {
+            return new CombatUpdateResult(false, false);
+        }
+
+        bool wantsToFire = currentWeapon.IsAutomatic
+            ? Raylib.IsMouseButtonDown(MouseButton.Left)
+            : Raylib.IsMouseButtonPressed(MouseButton.Left);
+        if (!wantsToFire)
         {
             return new CombatUpdateResult(false, false);
         }

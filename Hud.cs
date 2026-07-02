@@ -124,7 +124,7 @@ public sealed class Hud
         const int lineHeight = 26;
         const int fontSize = 20;
         int panelWidth = 300;
-        int panelHeight = lineHeight * 4;
+        int panelHeight = lineHeight * 5;
         int x = screenWidth - panelWidth - Padding;
         int y = screenHeight - panelHeight - Padding - 26;
         Weapon? weapon = player.CurrentWeapon;
@@ -134,12 +134,14 @@ public sealed class Hud
 
         if (weapon is null)
         {
+            Raylib.DrawText("Slot Status: Empty", x, y + lineHeight * 2, fontSize, Color.LightGray);
             return;
         }
 
         string reloadState = weapon.IsReloading ? "Reload: RELOADING" : "Reload: READY";
-        Raylib.DrawText($"Magazine: {weapon.MagazineAmmo}/{weapon.MagazineSize}", x, y + lineHeight * 2, fontSize, Color.RayWhite);
-        Raylib.DrawText($"Reserve: {weapon.ReserveAmmo} | {reloadState}", x, y + lineHeight * 3, fontSize, weapon.IsReloading ? Color.Gold : Color.LightGray);
+        Raylib.DrawText($"Category: {weapon.Category} | {(weapon.IsAutomatic ? "Auto" : "Semi")}", x, y + lineHeight * 2, fontSize, Color.LightGray);
+        Raylib.DrawText($"Magazine: {weapon.MagazineAmmo}/{weapon.MagazineSize}", x, y + lineHeight * 3, fontSize, Color.RayWhite);
+        Raylib.DrawText($"Reserve: {weapon.ReserveAmmo} | {reloadState}", x, y + lineHeight * 4, fontSize, weapon.IsReloading ? Color.Gold : Color.LightGray);
     }
 
     private static void RenderBar(string label, float percent, int x, int y, int width, int height, Color fillColor, float damageFlash, float rechargePulse)

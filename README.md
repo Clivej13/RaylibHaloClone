@@ -29,9 +29,11 @@ dotnet run -c Debug
 - **Space**: Jump
 - **Left Mouse Button**: Fire the equipped weapon when armed
 - **R**: Reload the equipped weapon when armed
-- **1 / 2 / 3**: Switch equipped slot (Primary / Secondary / Sidearm)
-- **E**: Interact with the object under the crosshair when close enough
-- **G**: Drop the current weapon into the world
+- **1**: Equip Primary slot
+- **2**: Equip Secondary slot
+- **3**: Equip Sidearm slot
+- **E**: Pickup or interact with the object under the crosshair when close enough
+- **G**: Drop the equipped weapon into the world
 - **Enter**: Restart after victory or defeat
 - **Esc / window close**: Quit
 
@@ -39,7 +41,7 @@ dotnet run -c Debug
 
 - **FPS movement**: first-person WASD movement, mouse look, sprinting, and jumping.
 - **Collision and platforming**: player collision against arena bounds, walls, doors, cover, and a raised platforming route.
-- **Combat**: hitscan rifle firing with enemy hit detection, tracer feedback, muzzle flash, and recoil/kick.
+- **Combat**: hitscan rifle, shotgun, and pistol firing with enemy hit detection, tracer feedback, muzzle flash, and recoil/kick.
 - **Weapon ammo and reload**: magazine ammo, reserve ammo, reload timing, safe unarmed input handling, and HUD reload status.
 - **Player health and shield**: health damage, rechargeable shield, shield break feedback, and damage overlays.
 - **Enemy AI and combat**: enemies detect the player, move, strafe, check line of sight, aim, attack, take damage, and flash when hit.
@@ -55,9 +57,15 @@ dotnet run -c Debug
 
 ## Equipment System
 
-Phase 1 adds a minimal equipment foundation without a full inventory UI or Resident Evil-style inventory management. The player has **Primary**, **Secondary**, and **Sidearm** slots, and the current weapon is derived from the selected equipped slot. Empty slots are allowed, so selecting or dropping into an empty slot leaves the player **Unarmed**; firing and reloading safely do nothing while unarmed.
+Phase 2 keeps the equipment foundation intentionally lightweight without a full inventory UI or Resident Evil-style inventory management. The player has **Primary**, **Secondary**, and **Sidearm** slots, and the current weapon is derived from the selected equipped slot. Empty slots are allowed, so selecting or dropping into an empty slot leaves the player **Unarmed**; firing and reloading safely do nothing while unarmed.
 
-The default mission loadout is an **MA5B Rifle** in the Primary slot only. Secondary starts empty, and Sidearm is currently reserved for future sidearm categories. Weapon pickups fill Primary first, then Secondary; if both weapon slots are full, picking up another weapon swaps it with the currently equipped slot and drops the previous weapon into the world. Restarting after victory or defeat restores the default mission loadout, so weapons dropped during a run stay removed only for that run.
+Current equipment content:
+
+- **Primary slot**: **MA5B Rifle**. Automatic, balanced damage, range, magazine size, and reserve ammo.
+- **Secondary slot**: **M90 Shotgun**. Semi-auto, higher damage, shorter range, slower fire rate, and smaller magazine. The test level includes a shotgun pickup.
+- **Sidearm slot**: **M6D Pistol**. Semi-auto, lower damage than the rifle, moderate range, slower fire cadence, and sidearm ammo.
+
+The default mission loadout is an **MA5B Rifle** in Primary, an empty Secondary slot, and an **M6D Pistol** in Sidearm. Weapon pickups go into their category-matched slot. If that slot is empty, the pickup is stored and equipped there; if it is full, the pickup replaces that slot and drops the old weapon nearby using the existing no-overlap placement rules. Restarting after victory or defeat restores the default mission loadout, so weapons dropped during a run stay removed only for that run.
 
 ## Gameplay Loop
 

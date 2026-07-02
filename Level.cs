@@ -283,6 +283,8 @@ public sealed class Level
     {
         AddWorldObject(new HealthPackPickup(new Vector3(-5f, 0.25f, 6f)));
         AddWorldObject(new WeaponPickup(new Vector3(5f, 0.35f, 6f), Weapon.CreateRifle()));
+        AddWorldObject(new WeaponPickup(new Vector3(7f, 0.35f, 8f), Weapon.CreateShotgun()));
+        AddWorldObject(new WeaponPickup(new Vector3(3f, 0.35f, 8f), Weapon.CreatePistol()));
     }
 
     private void AddWorldObject(WorldInteractable worldObject)

@@ -21,6 +21,14 @@ public sealed class Equipment
         EquippedSlot = slot;
     }
 
+    public static EquippedSlot GetSlotForCategory(WeaponCategory category) => category switch
+    {
+        WeaponCategory.Primary => EquippedSlot.Primary,
+        WeaponCategory.Secondary => EquippedSlot.Secondary,
+        WeaponCategory.Sidearm => EquippedSlot.Sidearm,
+        _ => EquippedSlot.Primary
+    };
+
     public Weapon? GetWeapon(EquippedSlot slot) => slot switch
     {
         EquippedSlot.Primary => PrimaryWeapon,
@@ -54,7 +62,7 @@ public sealed class Equipment
     {
         PrimaryWeapon = Weapon.CreateRifle();
         SecondaryWeapon = null;
-        Sidearm = null;
+        Sidearm = Weapon.CreatePistol();
         EquippedSlot = EquippedSlot.Primary;
     }
 }

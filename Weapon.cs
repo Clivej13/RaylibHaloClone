@@ -5,15 +5,24 @@ namespace RaylibHaloClone;
 
 public readonly record struct WeaponFireResult(bool Fired, bool Hit, Vector3 TraceEnd);
 
+public enum WeaponCategory
+{
+    Primary,
+    Secondary,
+    Sidearm
+}
+
 public sealed class Weapon
 {
     private readonly int startingReserveAmmo;
     private float cooldownRemaining;
     private float reloadRemaining;
 
-    public Weapon(string name, float damage, float range, float fireCooldown, int magazineSize, int reserveAmmo, float reloadTime)
+    public Weapon(string name, WeaponCategory category, bool isAutomatic, float damage, float range, float fireCooldown, int magazineSize, int reserveAmmo, float reloadTime)
     {
         Name = name;
+        Category = category;
+        IsAutomatic = isAutomatic;
         Damage = damage;
         Range = range;
         FireCooldown = fireCooldown;
@@ -25,6 +34,8 @@ public sealed class Weapon
     }
 
     public string Name { get; }
+    public WeaponCategory Category { get; }
+    public bool IsAutomatic { get; }
     public float Damage { get; }
     public float Range { get; }
     public float FireCooldown { get; }
@@ -35,7 +46,9 @@ public sealed class Weapon
     public bool IsReloading => reloadRemaining > 0f;
     public bool CanFire => cooldownRemaining <= 0f && !IsReloading && MagazineAmmo > 0;
 
-    public static Weapon CreateRifle() => new("MA5B Rifle", 34f, 60f, 0.1f, 32, 160, 1.4f);
+    public static Weapon CreateRifle() => new("MA5B Rifle", WeaponCategory.Primary, true, 34f, 60f, 0.1f, 32, 160, 1.4f);
+    public static Weapon CreateShotgun() => new("M90 Shotgun", WeaponCategory.Secondary, false, 82f, 24f, 0.85f, 6, 36, 1.8f);
+    public static Weapon CreatePistol() => new("M6D Pistol", WeaponCategory.Sidearm, false, 24f, 42f, 0.32f, 12, 72, 1.2f);
 
     public void Reset()
     {
