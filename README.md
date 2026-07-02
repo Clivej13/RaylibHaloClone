@@ -43,7 +43,7 @@ dotnet run -c Debug
 ## Current Features
 
 - **FPS movement**: first-person WASD movement, mouse look, sprinting, and jumping.
-- **Collision and platforming**: player collision against arena bounds, walls, doors, cover, a reusable boarding pod module, and a raised platforming route.
+- **Collision and platforming**: player collision against arena bounds, walls, doors, cover, reusable boarding pod and perimeter corridor modules, and a raised platforming route.
 - **Combat**: hitscan rifle, shotgun, and pistol firing with enemy hit detection, tracer feedback, muzzle flash, and recoil/kick.
 - **Weapon ammo and reload**: magazine ammo, reserve ammo, reload timing, safe unarmed input handling, and HUD reload status.
 - **Equipment resources**: stackable medkits, lethal equipment storage, and special equipment storage with HUD counts and placeholder use feedback.
@@ -80,6 +80,7 @@ The default mission loadout is an **MA5B Rifle** in Primary, an empty Secondary 
 ## Level Modules
 
 - The first reusable boarding pod module has been added in one arena corner. It is built from simple cube geometry, includes an aligned floor, roof, walls, exit opening, side-wall switch that opens its closed exit door, and player spawn facing the exit, and is placed without replacing the current arena or objectives.
+- A reusable perimeter corridor module now sits outside the boarding pod exit. It supports an origin, cardinal facing, configurable side door count, and optional breach gap; its cube-built floor, roof, hull wall, inner side door placeholders, end doors, linked switches, and collision boxes rotate together as one module.
 
 ## Gameplay Loop
 
