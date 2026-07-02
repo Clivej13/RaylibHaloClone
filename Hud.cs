@@ -75,13 +75,9 @@ public sealed class Hud
             RenderHitMarker(centerX, centerY);
         }
 
-        Raylib.DrawFPS(Padding, Padding);
-        Raylib.DrawText($"Position: {player.Position.X,6:0.00}, {player.Position.Y,5:0.00}, {player.Position.Z,6:0.00}", Padding, Padding + 32, 20, Color.RayWhite);
-        Raylib.DrawText($"Speed: {player.CurrentHorizontalSpeed:0.00} m/s", Padding, Padding + 58, 20, Color.RayWhite);
-        Raylib.DrawText($"Weapon: {player.CurrentWeapon.Name}", Padding, Padding + 84, 20, Color.RayWhite);
-        Raylib.DrawText($"Ammo: {player.CurrentWeapon.MagazineAmmo}/{player.CurrentWeapon.MagazineSize} | Reserve: {player.CurrentWeapon.ReserveAmmo}", Padding, Padding + 110, 20, Color.RayWhite);
-        RenderStatusBars(player, Padding, Padding + 140);
-        Raylib.DrawText($"Targets: {livingEnemies}", Padding, Padding + 224, 20, Color.RayWhite);
+        RenderDebugInfo(player, livingEnemies);
+        RenderPlayerStatus(player, screenWidth);
+        RenderWeaponInfo(player, screenWidth, screenHeight);
 
         if (player.CurrentWeapon.IsReloading && matchState == MatchState.Playing)
         {
@@ -96,10 +92,39 @@ public sealed class Hud
         Raylib.DrawText("WASD Move | Shift Sprint | Space Jump | Mouse Look | LMB Fire | R Reload", Padding, screenHeight - 34, 20, Color.LightGray);
     }
 
-    private void RenderStatusBars(Player player, int x, int y)
+    private static void RenderDebugInfo(Player player, int livingEnemies)
     {
-        RenderBar("SHIELD", player.Shield / Player.MaxShield, x, y, 260, 22, Rgba(72, 194, 255, 255), shieldHitFlashRemaining, shieldRechargePulseRemaining);
-        RenderBar("HEALTH", player.Health / Player.MaxHealth, x, y + 42, 260, 22, Rgba(96, 236, 126, 255), healthDamageFlashRemaining, 0f);
+        Raylib.DrawFPS(Padding, Padding);
+        Raylib.DrawText($"Position: {player.Position.X,6:0.00}, {player.Position.Y,5:0.00}, {player.Position.Z,6:0.00}", Padding, Padding + 32, 20, Color.RayWhite);
+        Raylib.DrawText($"Speed: {player.CurrentHorizontalSpeed:0.00} m/s", Padding, Padding + 58, 20, Color.RayWhite);
+        Raylib.DrawText($"Targets: {livingEnemies}", Padding, Padding + 84, 20, Color.RayWhite);
+    }
+
+    private void RenderPlayerStatus(Player player, int screenWidth)
+    {
+        const int barWidth = 260;
+        int x = (screenWidth - barWidth) / 2;
+        int y = Padding + 24;
+
+        RenderBar("SHIELD", player.Shield / Player.MaxShield, x, y, barWidth, 22, Rgba(72, 194, 255, 255), shieldHitFlashRemaining, shieldRechargePulseRemaining);
+        RenderBar("HEALTH", player.Health / Player.MaxHealth, x, y + 42, barWidth, 22, Rgba(96, 236, 126, 255), healthDamageFlashRemaining, 0f);
+    }
+
+    private static void RenderWeaponInfo(Player player, int screenWidth, int screenHeight)
+    {
+        const int lineHeight = 26;
+        const int fontSize = 20;
+        int panelWidth = 300;
+        int panelHeight = lineHeight * 4;
+        int x = screenWidth - panelWidth - Padding;
+        int y = screenHeight - panelHeight - Padding - 26;
+        Weapon weapon = player.CurrentWeapon;
+        string reloadState = weapon.IsReloading ? "Reload: RELOADING" : "Reload: READY";
+
+        Raylib.DrawText($"Weapon: {weapon.Name}", x, y, fontSize, Color.RayWhite);
+        Raylib.DrawText($"Magazine: {weapon.MagazineAmmo}/{weapon.MagazineSize}", x, y + lineHeight, fontSize, Color.RayWhite);
+        Raylib.DrawText($"Reserve: {weapon.ReserveAmmo}", x, y + lineHeight * 2, fontSize, Color.RayWhite);
+        Raylib.DrawText(reloadState, x, y + lineHeight * 3, fontSize, weapon.IsReloading ? Color.Gold : Color.LightGray);
     }
 
     private static void RenderBar(string label, float percent, int x, int y, int width, int height, Color fillColor, float damageFlash, float rechargePulse)
