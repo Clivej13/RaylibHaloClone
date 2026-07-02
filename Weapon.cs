@@ -3,7 +3,7 @@ using Raylib_cs;
 
 namespace RaylibHaloClone;
 
-public readonly record struct WeaponFireResult(bool Fired, bool Hit);
+public readonly record struct WeaponFireResult(bool Fired, bool Hit, Vector3 TraceEnd);
 
 public sealed class Weapon
 {
@@ -75,7 +75,7 @@ public sealed class Weapon
     {
         if (!CanFire)
         {
-            return new WeaponFireResult(false, false);
+            return new WeaponFireResult(false, false, origin);
         }
 
         MagazineAmmo--;
@@ -102,11 +102,11 @@ public sealed class Weapon
 
         if (closestEnemy is null)
         {
-            return new WeaponFireResult(true, false);
+            return new WeaponFireResult(true, false, origin + Vector3.Normalize(direction) * Range);
         }
 
         closestEnemy.TakeDamage(Damage);
-        return new WeaponFireResult(true, true);
+        return new WeaponFireResult(true, true, origin + Vector3.Normalize(direction) * closestDistance);
     }
 
     private void FinishReload()

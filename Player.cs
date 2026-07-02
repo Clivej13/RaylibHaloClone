@@ -25,6 +25,9 @@ public sealed class Player
     public const float MaxShield = 100f;
     private const float ShieldRechargeDelay = 5f;
     private const float ShieldRechargeRate = 28f;
+    private const float WeaponTracerTime = 0.06f;
+    private const float MuzzleFlashTime = 0.05f;
+    private const float ScreenKickDegrees = 0.45f;
 
 
     private Vector3 position;
@@ -33,6 +36,10 @@ public sealed class Player
     private float pitch;
     private bool grounded;
     private float timeSinceDamage = ShieldRechargeDelay;
+    private float weaponTracerRemaining;
+    private float muzzleFlashRemaining;
+    private Vector3 lastWeaponTraceStart;
+    private Vector3 lastWeaponTraceEnd;
 
 
     public Player(Vector3 spawnPosition)
@@ -54,6 +61,11 @@ public sealed class Player
     public bool IsAlive => Health > 0f;
     public float CurrentHorizontalSpeed => MathUtils.Flatten(velocity).Length();
     public float MovementBobSpeed => CurrentHorizontalSpeed;
+    public bool HasWeaponTracer => weaponTracerRemaining > 0f;
+    public bool HasMuzzleFlash => muzzleFlashRemaining > 0f;
+    public float MuzzleFlashIntensity => MuzzleFlashTime <= 0f ? 0f : muzzleFlashRemaining / MuzzleFlashTime;
+    public Vector3 WeaponTraceStart => lastWeaponTraceStart;
+    public Vector3 WeaponTraceEnd => lastWeaponTraceEnd;
 
     private Vector3 Forward
     {
@@ -87,6 +99,7 @@ public sealed class Player
         }
 
         timeSinceDamage = 0f;
+        PlayShieldHitSound();
         float shieldDamage = MathF.Min(Shield, damage);
         Shield -= shieldDamage;
         Health = MathF.Max(0f, Health - (damage - shieldDamage));
@@ -115,6 +128,8 @@ public sealed class Player
         Shield = MaxShield;
         timeSinceDamage = ShieldRechargeDelay;
         CurrentWeapon.Reset();
+        weaponTracerRemaining = 0f;
+        muzzleFlashRemaining = 0f;
         UpdateCamera();
     }
 
@@ -133,6 +148,8 @@ public sealed class Player
         }
 
         CurrentWeapon.Update(deltaTime);
+        weaponTracerRemaining = MathF.Max(0f, weaponTracerRemaining - deltaTime);
+        muzzleFlashRemaining = MathF.Max(0f, muzzleFlashRemaining - deltaTime);
 
         if (Raylib.IsKeyPressed(KeyboardKey.R))
         {
@@ -144,7 +161,18 @@ public sealed class Player
             return new CombatUpdateResult(false, false);
         }
 
+        Vector3 traceStart = CameraPosition + LookDirection * 0.45f - Vector3.UnitY * 0.12f;
         WeaponFireResult fireResult = CurrentWeapon.Fire(CameraPosition, LookDirection, enemies);
+        if (fireResult.Fired)
+        {
+            lastWeaponTraceStart = traceStart;
+            lastWeaponTraceEnd = fireResult.TraceEnd;
+            weaponTracerRemaining = WeaponTracerTime;
+            muzzleFlashRemaining = MuzzleFlashTime;
+            ApplyWeaponKick();
+            PlayWeaponFireSound();
+        }
+
         return new CombatUpdateResult(fireResult.Fired, fireResult.Hit);
     }
 
@@ -172,6 +200,22 @@ public sealed class Player
         velocity.Y -= Gravity * deltaTime;
         MoveAndCollide(level, deltaTime);
         UpdateCamera();
+    }
+
+    private void ApplyWeaponKick()
+    {
+        pitch = MathUtils.Clamp(pitch + ScreenKickDegrees, -MaxLookPitch, MaxLookPitch);
+        UpdateCamera();
+    }
+
+    private static void PlayWeaponFireSound()
+    {
+        // Placeholder hook for future rifle audio.
+    }
+
+    private static void PlayShieldHitSound()
+    {
+        // Placeholder hook for future shield impact audio.
     }
 
     private Vector3 GetMovementInput()

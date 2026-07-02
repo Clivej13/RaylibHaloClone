@@ -124,9 +124,15 @@ public sealed class Game : IDisposable
         {
             enemy.Render();
         }
+
+        if (player.HasWeaponTracer)
+        {
+            Raylib.DrawLine3D(player.WeaponTraceStart, player.WeaponTraceEnd, new Color(120, 210, 255, 220));
+        }
+
         Raylib.EndMode3D();
 
-        weaponViewModel.Render();
+        weaponViewModel.Render(player.HasMuzzleFlash, player.MuzzleFlashIntensity);
         hud.Render(player, enemies.Count(enemy => enemy.IsAlive), matchState);
         Raylib.EndDrawing();
     }

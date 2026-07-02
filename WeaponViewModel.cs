@@ -8,7 +8,7 @@ public sealed class WeaponViewModel
     private const float BobFrequency = 3f;
     private const float BobAmount = 0.035f;
     private const float RecoilDuration = 0.12f;
-    private const float RecoilKick = 0.18f;
+    private const float RecoilKick = 0.26f;
 
     private float bobPhase;
     private float recoilRemaining;
@@ -24,7 +24,7 @@ public sealed class WeaponViewModel
         recoilRemaining = RecoilDuration;
     }
 
-    public void Render()
+    public void Render(bool showMuzzleFlash, float muzzleFlashIntensity)
     {
         float bob = MathF.Sin(bobPhase) * BobAmount;
         float recoil = recoilRemaining / RecoilDuration;
@@ -55,10 +55,17 @@ public sealed class WeaponViewModel
             new Vector3(0.14f, 0.3f, 0.16f),
             new Color(34, 38, 44, 255));
 
+        Vector3 barrelPosition = basePosition + new Vector3(0f, 0.01f, 0.48f);
         DrawPart(
-            basePosition + new Vector3(0f, 0.01f, 0.48f),
+            barrelPosition,
             new Vector3(0.12f, 0.1f, 0.45f),
             new Color(40, 45, 52, 255));
+
+        if (showMuzzleFlash)
+        {
+            float flashRadius = 0.08f + muzzleFlashIntensity * 0.12f;
+            Raylib.DrawSphere(barrelPosition + new Vector3(0f, 0f, 0.3f), flashRadius, new Color(255, 210, 80, 235));
+        }
 
         Raylib.EndMode3D();
     }
