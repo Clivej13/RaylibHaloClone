@@ -41,22 +41,20 @@ public abstract class WorldInteractable : IInteractable
 
 public sealed class HealthPackPickup : WorldInteractable
 {
-    private readonly float healAmount;
-
-    public HealthPackPickup(Vector3 position, float healAmount = 45f)
-        : base("Health Pack", position, new Vector3(0.75f, 0.35f, 0.75f))
+    public HealthPackPickup(Vector3 position)
+        : base("Medkit", position, new Vector3(0.75f, 0.35f, 0.75f))
     {
-        this.healAmount = healAmount;
     }
 
-    public override string GetPrompt(Player player) => player.Health < Player.MaxHealth ? $"Press E to pick up {DisplayName}" : "Health full";
-    public override bool CanInteract(Player player) => IsActive && player.Health < Player.MaxHealth;
+    public override string GetPrompt(Player player) => player.Equipment.MedkitCount < Equipment.MaxMedkits
+        ? $"Press E to pick up {DisplayName}"
+        : "Medkit stack full";
+    public override bool CanInteract(Player player) => IsActive && player.Equipment.MedkitCount < Equipment.MaxMedkits;
 
     public override void Interact(Player player, Level level)
     {
         if (!CanInteract(player)) return;
-        player.Heal(healAmount);
-        IsActive = false;
+        IsActive = !player.PickUpMedkit();
     }
 
     public override void Render()
@@ -84,7 +82,7 @@ public sealed class WeaponPickup : WorldInteractable
     public override void Interact(Player player, Level level)
     {
         if (!CanInteract(player)) return;
-        Weapon dropped = player.ExchangeWeapon(Weapon);
+        Weapon? dropped = player.PickUpWeapon(Weapon);
         IsActive = false;
         level.DropWeapon(player, dropped);
     }

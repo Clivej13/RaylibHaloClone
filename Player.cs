@@ -28,6 +28,8 @@ public sealed class Player
     private const float WeaponTracerTime = 0.06f;
     private const float MuzzleFlashTime = 0.05f;
     private const float ScreenKickDegrees = 0.45f;
+    private const float MedkitHealAmount = 45f;
+    private const float EquipmentMessageTime = 1.15f;
 
 
     private Vector3 position;
@@ -40,6 +42,7 @@ public sealed class Player
     private float muzzleFlashRemaining;
     private Vector3 lastWeaponTraceStart;
     private Vector3 lastWeaponTraceEnd;
+    private float equipmentMessageRemaining;
 
 
     public Player(Vector3 spawnPosition)
@@ -49,6 +52,7 @@ public sealed class Player
         Shield = MaxShield;
         Vector3 cameraPosition = GetCameraPosition();
         Camera = new Camera3D(cameraPosition, cameraPosition + Forward, Vector3.UnitY, 75f, CameraProjection.Perspective);
+        Equipment.ResetToDefaultMissionLoadout();
     }
 
     public Camera3D Camera { get; private set; }
@@ -56,7 +60,9 @@ public sealed class Player
     public BoundingBox CollisionBox => CreatePlayerBox(position);
     public Vector3 LookDirection => Forward;
     public Vector3 CameraPosition => GetCameraPosition();
-    public Weapon CurrentWeapon { get; private set; } = Weapon.CreateRifle();
+    public Equipment Equipment { get; } = new();
+    public Weapon? CurrentWeapon => Equipment.CurrentWeapon;
+    public EquippedSlot EquippedSlot => Equipment.EquippedSlot;
     public float Health { get; private set; }
     public float Shield { get; private set; }
     public bool IsAlive => Health > 0f;
@@ -67,6 +73,8 @@ public sealed class Player
     public float MuzzleFlashIntensity => MuzzleFlashTime <= 0f ? 0f : muzzleFlashRemaining / MuzzleFlashTime;
     public Vector3 WeaponTraceStart => lastWeaponTraceStart;
     public Vector3 WeaponTraceEnd => lastWeaponTraceEnd;
+    public string? EquipmentMessage { get; private set; }
+    public bool HasEquipmentMessage => equipmentMessageRemaining > 0f && !string.IsNullOrWhiteSpace(EquipmentMessage);
 
     private Vector3 Forward
     {
@@ -106,6 +114,8 @@ public sealed class Player
         Health = MathF.Max(0f, Health - (damage - shieldDamage));
     }
 
+    public bool PickUpMedkit() => Equipment.AddMedkit();
+
     public bool Heal(float amount)
     {
         if (!IsAlive || amount <= 0f || Health >= MaxHealth)
@@ -117,18 +127,33 @@ public sealed class Player
         return true;
     }
 
-    public Weapon ExchangeWeapon(Weapon newWeapon)
+    public Weapon? PickUpWeapon(Weapon newWeapon)
     {
-        Weapon previousWeapon = CurrentWeapon;
-        CurrentWeapon = newWeapon;
-        return previousWeapon;
+        EquippedSlot matchingSlot = Equipment.GetSlotForCategory(newWeapon.Category);
+        Weapon? previousWeapon = Equipment.GetWeapon(matchingSlot);
+
+        if (previousWeapon is null)
+        {
+            Equipment.SetWeapon(matchingSlot, newWeapon);
+            Equipment.EquipSlot(matchingSlot);
+            return null;
+        }
+
+        // If the relevant slot is full, keep the rule deterministic: replace the
+        // category-matched slot and return its previous weapon so the pickup system
+        // can drop it nearby. When that slot is currently equipped, this is a direct
+        // swap with the visible weapon; otherwise the equipped slot is left unchanged.
+        return Equipment.SetWeapon(matchingSlot, newWeapon);
     }
 
-    public Weapon DropCurrentWeapon()
+    public Weapon? DropCurrentWeapon()
     {
-        Weapon droppedWeapon = CurrentWeapon;
-        CurrentWeapon = Weapon.CreateRifle();
-        return droppedWeapon;
+        return Equipment.RemoveCurrentWeapon();
+    }
+
+    public void EquipSlot(EquippedSlot slot)
+    {
+        Equipment.EquipSlot(slot);
     }
 
     public void UpdateShieldRecharge(float deltaTime)
@@ -153,9 +178,13 @@ public sealed class Player
         Health = MaxHealth;
         Shield = MaxShield;
         timeSinceDamage = ShieldRechargeDelay;
-        CurrentWeapon = Weapon.CreateRifle();
+        // Reset/restarts restore the default mission equipment. This intentionally recreates
+        // the starting weapons and resource counts only at level reset, not every frame/update,
+        // so dropped or consumed equipment stays removed until pickup or level restart.
+        Equipment.ResetToDefaultMissionLoadout();
         weaponTracerRemaining = 0f;
         muzzleFlashRemaining = 0f;
+        ClearEquipmentMessage();
         UpdateCamera();
     }
 
@@ -173,22 +202,40 @@ public sealed class Player
             return new CombatUpdateResult(false, false);
         }
 
-        CurrentWeapon.Update(deltaTime);
+        CurrentWeapon?.Update(deltaTime);
         weaponTracerRemaining = MathF.Max(0f, weaponTracerRemaining - deltaTime);
         muzzleFlashRemaining = MathF.Max(0f, muzzleFlashRemaining - deltaTime);
+        equipmentMessageRemaining = MathF.Max(0f, equipmentMessageRemaining - deltaTime);
 
+        if (Raylib.IsKeyPressed(KeyboardKey.H)) UseMedkit();
+        if (Raylib.IsKeyPressed(KeyboardKey.Q)) UseLethal();
+        if (Raylib.IsKeyPressed(KeyboardKey.C)) UseSpecial();
+
+        if (Raylib.IsKeyPressed(KeyboardKey.One)) Equipment.EquipSlot(EquippedSlot.Primary);
+        if (Raylib.IsKeyPressed(KeyboardKey.Two)) Equipment.EquipSlot(EquippedSlot.Secondary);
+        if (Raylib.IsKeyPressed(KeyboardKey.Three)) Equipment.EquipSlot(EquippedSlot.Sidearm);
+
+        Weapon? currentWeapon = CurrentWeapon;
         if (Raylib.IsKeyPressed(KeyboardKey.R))
         {
-            CurrentWeapon.Reload();
+            currentWeapon?.Reload();
         }
 
-        if (!Raylib.IsMouseButtonDown(MouseButton.Left))
+        if (currentWeapon is null)
+        {
+            return new CombatUpdateResult(false, false);
+        }
+
+        bool wantsToFire = currentWeapon.IsAutomatic
+            ? Raylib.IsMouseButtonDown(MouseButton.Left)
+            : Raylib.IsMouseButtonPressed(MouseButton.Left);
+        if (!wantsToFire)
         {
             return new CombatUpdateResult(false, false);
         }
 
         Vector3 traceStart = CameraPosition + LookDirection * 0.45f - Vector3.UnitY * 0.12f;
-        WeaponFireResult fireResult = CurrentWeapon.Fire(CameraPosition, LookDirection, enemies);
+        WeaponFireResult fireResult = currentWeapon.Fire(CameraPosition, LookDirection, enemies);
         if (fireResult.Fired)
         {
             lastWeaponTraceStart = traceStart;
@@ -226,6 +273,49 @@ public sealed class Player
         velocity.Y -= Gravity * deltaTime;
         MoveAndCollide(level, deltaTime);
         UpdateCamera();
+    }
+
+    private void UseMedkit()
+    {
+        if (Equipment.MedkitCount <= 0)
+        {
+            ShowEquipmentMessage("NO MEDKITS");
+            return;
+        }
+
+        if (Health >= MaxHealth)
+        {
+            ShowEquipmentMessage("HEALTH FULL");
+            return;
+        }
+
+        if (Equipment.UseMedkit())
+        {
+            Heal(MedkitHealAmount);
+            ShowEquipmentMessage("MEDKIT USED");
+        }
+    }
+
+    private void UseLethal()
+    {
+        ShowEquipmentMessage(Equipment.UseLethal() ? "LETHAL USED" : "NO LETHAL AVAILABLE");
+    }
+
+    private void UseSpecial()
+    {
+        ShowEquipmentMessage(Equipment.UseSpecial() ? "SPECIAL USED" : "NO SPECIAL AVAILABLE");
+    }
+
+    private void ShowEquipmentMessage(string message)
+    {
+        EquipmentMessage = message;
+        equipmentMessageRemaining = EquipmentMessageTime;
+    }
+
+    private void ClearEquipmentMessage()
+    {
+        EquipmentMessage = null;
+        equipmentMessageRemaining = 0f;
     }
 
     private void ApplyWeaponKick()
