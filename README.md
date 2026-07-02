@@ -80,7 +80,7 @@ The default mission loadout is an **MA5B Rifle** in Primary, an empty Secondary 
 ## Level Modules
 
 - The first reusable boarding pod module has been added in one arena corner. It is built from simple cube geometry, includes an aligned floor, roof, walls, exit opening, side-wall switch that opens its closed exit door, and player spawn facing the exit, and is placed without replacing the current arena or objectives.
-- A reusable perimeter corridor module now sits outside the boarding pod exit. It supports an origin, cardinal facing, configurable side door count, and optional breach gap; its cube-built floor, roof, hull wall, inner side door placeholders, end doors, linked switches, and collision boxes rotate together as one module.
+- A reusable perimeter corridor module now sits outside the boarding pod exit. It supports an origin, cardinal facing, configurable side door count, side-door spacing/margins, and optional breach gap; its cube-built floor, roof, hull wall, inner side door placeholders, end doors, linked switches, and collision boxes rotate together as one module.
 
 ## Gameplay Loop
 

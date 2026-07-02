@@ -210,18 +210,31 @@ public sealed class PerimeterCorridorModule
     private const float DoorHeight = 2.7f;
     private const float SwitchInset = 0.08f;
     private const float SwitchHeight = 1.15f;
+    private const float DefaultSideDoorSpacing = 3f;
+    private const float DefaultStartSideDoorMargin = 3f;
+    private const float DefaultEndSideDoorMargin = 3f;
 
     private readonly List<(Vector3 Position, Vector3 Size)> solids = new();
     private readonly List<(Vector3 Position, Vector3 Size)> detailCubes = new();
     private readonly List<Door> doors = new();
     private readonly List<InteractableSwitch> switches = new();
 
-    public PerimeterCorridorModule(Vector3 origin, ModuleFacing facing, int sideDoorCount, bool hasBreachGap)
+    public PerimeterCorridorModule(
+        Vector3 origin,
+        ModuleFacing facing,
+        int sideDoorCount,
+        bool hasBreachGap,
+        float sideDoorSpacing = DefaultSideDoorSpacing,
+        float startSideDoorMargin = DefaultStartSideDoorMargin,
+        float endSideDoorMargin = DefaultEndSideDoorMargin)
     {
         Origin = origin;
         Facing = facing;
         SideDoorCount = Math.Max(0, sideDoorCount);
         HasBreachGap = hasBreachGap;
+        SideDoorSpacing = sideDoorSpacing;
+        StartSideDoorMargin = startSideDoorMargin;
+        EndSideDoorMargin = endSideDoorMargin;
         BuildGeometry();
     }
 
@@ -229,6 +242,9 @@ public sealed class PerimeterCorridorModule
     public ModuleFacing Facing { get; }
     public int SideDoorCount { get; }
     public bool HasBreachGap { get; }
+    public float SideDoorSpacing { get; }
+    public float StartSideDoorMargin { get; }
+    public float EndSideDoorMargin { get; }
     public IEnumerable<BoundingBox> CollisionBoxes => solids.Select(solid => Level.ToBoundingBox(solid.Position, solid.Size));
     public IReadOnlyList<Door> Doors => doors;
     public IReadOnlyList<InteractableSwitch> Switches => switches;
@@ -275,8 +291,7 @@ public sealed class PerimeterCorridorModule
         AddSolid(new Vector3(0f, Height + WallThickness / 2f, 0f), new Vector3(Length, WallThickness, Width));
         AddWallWithOpenings(-Width / 2f + WallThickness / 2f, HasBreachGap ? new[] { 0f } : Array.Empty<float>());
 
-        float spacing = Length / (SideDoorCount + 1);
-        float[] sideDoorCenters = Enumerable.Range(1, SideDoorCount).Select(i => -Length / 2f + spacing * i).ToArray();
+        float[] sideDoorCenters = CalculateSideDoorCenters();
         AddWallWithOpenings(Width / 2f - WallThickness / 2f, sideDoorCenters);
 
         AddEndWall(-Length / 2f + WallThickness / 2f, "West End Door", 1f);
@@ -291,6 +306,34 @@ public sealed class PerimeterCorridorModule
                 new Vector3(sideDoorCenters[i] - DoorWidth / 2f - 0.45f, SwitchHeight, Width / 2f - WallThickness - SwitchInset),
                 new Vector3(0.35f, 0.8f, 0.65f), -Vector3.UnitZ);
         }
+    }
+
+    private float[] CalculateSideDoorCenters()
+    {
+        if (SideDoorCount == 0)
+        {
+            return Array.Empty<float>();
+        }
+
+        if (StartSideDoorMargin < DoorWidth / 2f || EndSideDoorMargin < DoorWidth / 2f)
+        {
+            throw new InvalidOperationException("Perimeter corridor side door margins must leave enough wall length for the side door openings.");
+        }
+
+        if (SideDoorCount > 1 && SideDoorSpacing < DoorWidth)
+        {
+            throw new InvalidOperationException("Perimeter corridor side door spacing must be at least one side door width to avoid overlapping side doors.");
+        }
+
+        float requiredLength = StartSideDoorMargin + EndSideDoorMargin + SideDoorSpacing * (SideDoorCount - 1);
+        if (requiredLength > Length)
+        {
+            throw new InvalidOperationException($"Perimeter corridor side door layout requires {requiredLength:0.##}m, but the corridor length is {Length:0.##}m.");
+        }
+
+        return Enumerable.Range(0, SideDoorCount)
+            .Select(i => -Length / 2f + StartSideDoorMargin + SideDoorSpacing * i)
+            .ToArray();
     }
 
     private void AddWallWithOpenings(float localZ, IReadOnlyList<float> openingCenters)
