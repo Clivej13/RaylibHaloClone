@@ -67,13 +67,15 @@ public sealed partial class Level
     private readonly List<WorldInteractable> worldObjects = new();
     private readonly BoardingPodModule boardingPod;
     private readonly PerimeterCorridorModule perimeterCorridor;
+    private readonly BoardingPodCrashSiteModule boardingPodCrashSite;
     private readonly SpawnPointObject spawnPoint;
     private readonly ExitZoneObject exitZone;
 
     public Level()
     {
-        boardingPod = new BoardingPodModule(new Vector3(-18f, 0f, -18f), ModuleFacing.North);
+        boardingPod = new BoardingPodModule(new Vector3(-18f, 0f, -17.35f), ModuleFacing.North);
         perimeterCorridor = new PerimeterCorridorModule(new Vector3(-18f, 0f, -13.25f), ModuleFacing.North, sideDoorCount: 3, hasBreachGap: true);
+        boardingPodCrashSite = new BoardingPodCrashSiteModule(perimeterCorridor.Origin, perimeterCorridor.Facing);
         spawnPoint = new SpawnPointObject(boardingPod.SpawnPosition, boardingPod.SpawnLookDirection);
         exitZone = new ExitZoneObject(new Vector3(0f, 0.95f, 16f), new Vector3(3f, 2.1f, 3f));
         PlayerSpawnPosition = spawnPoint.Position;
@@ -89,6 +91,7 @@ public sealed partial class Level
         BuildPlatformingRoute();
         AddLevelObjects(boardingPod.Objects);
         AddLevelObjects(perimeterCorridor.Objects);
+        AddLevelObjects(boardingPodCrashSite.Objects);
         BuildInteractiveObjects();
     }
 
