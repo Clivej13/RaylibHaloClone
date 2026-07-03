@@ -46,7 +46,14 @@ public sealed class InteractableSwitch : IInteractable, ILevelObject, IResettabl
         SwitchType.PoweredDoor => "powered door switch",
         SwitchType.Lights => "light switch",
         SwitchType.BoardingPodDoor => "boarding pod door switch",
-        SwitchType.LinkedDoor => TargetDoorName is null ? "door switch" : $"{TargetDoorName} switch",
+        SwitchType.LinkedDoor => TargetDoorName switch
+        {
+            "Security Door" => "security door switch",
+            "Powered Door" => "powered door switch",
+            "Boarding Pod Door" => "boarding pod door switch",
+            null => "door switch",
+            _ => $"{TargetDoorName} switch"
+        },
         _ => "switch"
     };
     public bool IsActive => CanUse;

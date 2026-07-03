@@ -23,6 +23,10 @@ public sealed partial class Level
     internal static readonly Color ActiveExitFillColor = new(60, 220, 210, 75);
     internal static readonly Color ActiveExitWireColor = new(100, 255, 220, 255);
 
+    private const string SecurityDoorName = "Security Door";
+    private const string PoweredDoorName = "Powered Door";
+    private const string BoardingPodDoorName = "Boarding Pod Door";
+
     private const int PlatformCount = 7;
     private const float CentralPlatformSize = 2.8f;
     private const float HeightStep = 0.32f;
@@ -104,24 +108,32 @@ public sealed partial class Level
                 ExitSwitchActivated = true;
                 break;
             case SwitchType.DoorOpen:
-                doors[0].Open();
+                OpenTargetDoor(interactableSwitch, SecurityDoorName);
                 break;
             case SwitchType.PoweredDoor:
-                doors[1].Open();
+                OpenTargetDoor(interactableSwitch, PoweredDoorName);
                 break;
             case SwitchType.Lights:
                 LightsOn = true;
                 break;
             case SwitchType.BoardingPodDoor:
-                doors.FirstOrDefault(door => door.Name == "Boarding Pod Door")?.Open();
+                OpenTargetDoor(interactableSwitch, BoardingPodDoorName);
                 break;
             case SwitchType.LinkedDoor:
-                if (interactableSwitch.TargetDoorName is not null)
-                {
-                    doors.FirstOrDefault(door => door.Name == interactableSwitch.TargetDoorName)?.Open();
-                }
+                OpenTargetDoor(interactableSwitch);
                 break;
         }
+    }
+
+    private void OpenTargetDoor(InteractableSwitch interactableSwitch, string? fallbackDoorName = null)
+    {
+        string? targetDoorName = interactableSwitch.TargetDoorName ?? fallbackDoorName;
+        if (targetDoorName is null)
+        {
+            return;
+        }
+
+        doors.FirstOrDefault(door => door.Name == targetDoorName)?.Open();
     }
 
     public void ResetInteractiveState()
@@ -159,16 +171,16 @@ public sealed partial class Level
 
     private void BuildInteractiveObjects()
     {
-        AddDoor(new Door("Security Door", new Vector3(-8f, 1.25f, -2f), new Vector3(4f, 2.5f, 0.45f), new Color(120, 76, 58, 255), new Color(72, 130, 84, 130)));
-        AddDoor(new Door("Powered Door", new Vector3(8f, 1.25f, -2f), new Vector3(4f, 2.5f, 0.45f), new Color(92, 54, 54, 255), new Color(72, 130, 190, 130)));
-        AddDoor(new Door("Boarding Pod Door", boardingPod.DoorPosition, boardingPod.DoorSize, new Color(84, 112, 132, 255), new Color(72, 170, 190, 130)));
+        AddDoor(new Door(SecurityDoorName, new Vector3(-8f, 1.25f, -2f), new Vector3(4f, 2.5f, 0.45f), new Color(120, 76, 58, 255), new Color(72, 130, 84, 130)));
+        AddDoor(new Door(PoweredDoorName, new Vector3(8f, 1.25f, -2f), new Vector3(4f, 2.5f, 0.45f), new Color(92, 54, 54, 255), new Color(72, 130, 190, 130)));
+        AddDoor(new Door(BoardingPodDoorName, boardingPod.DoorPosition, boardingPod.DoorSize, new Color(84, 112, 132, 255), new Color(72, 170, 190, 130)));
         foreach (Door door in perimeterCorridor.Doors) AddDoor(door);
 
-        AddSwitch(new InteractableSwitch(SwitchType.BoardingPodDoor, boardingPod.SwitchPosition, boardingPod.SwitchSize, boardingPod.SwitchFaceDirection));
+        AddSwitch(new InteractableSwitch(SwitchType.LinkedDoor, boardingPod.SwitchPosition, boardingPod.SwitchSize, boardingPod.SwitchFaceDirection, BoardingPodDoorName));
         foreach (InteractableSwitch interactableSwitch in perimeterCorridor.Switches) AddSwitch(interactableSwitch);
         AddSwitch(new InteractableSwitch(SwitchType.Lights, new Vector3(-15f, 0.55f, 8f), new Vector3(0.8f, 1.1f, 0.45f)));
-        AddSwitch(new InteractableSwitch(SwitchType.DoorOpen, new Vector3(-11f, 0.55f, -2f), new Vector3(0.8f, 1.1f, 0.45f)));
-        AddSwitch(new InteractableSwitch(SwitchType.PoweredDoor, new Vector3(11f, 0.55f, -2f), new Vector3(0.8f, 1.1f, 0.45f)));
+        AddSwitch(new InteractableSwitch(SwitchType.LinkedDoor, new Vector3(-11f, 0.55f, -2f), new Vector3(0.8f, 1.1f, 0.45f), targetDoorName: SecurityDoorName));
+        AddSwitch(new InteractableSwitch(SwitchType.LinkedDoor, new Vector3(11f, 0.55f, -2f), new Vector3(0.8f, 1.1f, 0.45f), targetDoorName: PoweredDoorName));
         AddSwitch(new InteractableSwitch(SwitchType.ExitActivation, new Vector3(3.5f, 0.55f, 15f), new Vector3(0.8f, 1.1f, 0.45f)));
         AddInitialPickups();
 
