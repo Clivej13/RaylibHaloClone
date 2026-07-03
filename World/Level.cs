@@ -27,6 +27,8 @@ public sealed partial class Level
     private const string PoweredDoorName = "Powered Door";
     private const string BoardingPodDoorName = "Boarding Pod Door";
 
+    private const bool BuildArenaLayout = false;
+
     private const int PlatformCount = 7;
     private const float CentralPlatformSize = 2.8f;
     private const float HeightStep = 0.32f;
@@ -74,21 +76,34 @@ public sealed partial class Level
     public Level()
     {
         boardingPod = new BoardingPodModule(new Vector3(-18f, 0f, -17.35f), ModuleFacing.North);
-        perimeterCorridor = new PerimeterCorridorModule(new Vector3(-18f, 0f, -13.25f), ModuleFacing.North, sideDoorCount: 3, hasBreachGap: true);
+        perimeterCorridor = new PerimeterCorridorModule(
+            new Vector3(-18f, 0f, -13.25f),
+            ModuleFacing.North,
+            sideDoorCount: 3,
+            hasBreachGap: true,
+            sideDoorSpacing: 10f,
+            startSideDoorMargin: 15f,
+            endSideDoorMargin: 15f);
         boardingPodCrashSite = new BoardingPodCrashSiteModule(perimeterCorridor.Origin, perimeterCorridor.Facing);
         spawnPoint = new SpawnPointObject(boardingPod.SpawnPosition, boardingPod.SpawnLookDirection);
         exitZone = new ExitZoneObject(new Vector3(0f, 0.95f, 16f), new Vector3(3f, 2.1f, 3f));
         PlayerSpawnPosition = spawnPoint.Position;
         PlayerSpawnLookDirection = spawnPoint.LookDirection;
         AddLevelObject(spawnPoint);
-        AddLevelObject(exitZone);
+        if (BuildArenaLayout)
+        {
+            AddLevelObject(exitZone);
+        }
 
-        AddWall(new Vector3(0f, WallHeight / 2f, -ArenaHalfSize), new Vector3(ArenaHalfSize * 2f, WallHeight, WallThickness));
-        AddWall(new Vector3(0f, WallHeight / 2f, ArenaHalfSize), new Vector3(ArenaHalfSize * 2f, WallHeight, WallThickness));
-        AddWall(new Vector3(-ArenaHalfSize, WallHeight / 2f, 0f), new Vector3(WallThickness, WallHeight, ArenaHalfSize * 2f));
-        AddWall(new Vector3(ArenaHalfSize, WallHeight / 2f, 0f), new Vector3(WallThickness, WallHeight, ArenaHalfSize * 2f));
+        if (BuildArenaLayout)
+        {
+            AddWall(new Vector3(0f, WallHeight / 2f, -ArenaHalfSize), new Vector3(ArenaHalfSize * 2f, WallHeight, WallThickness));
+            AddWall(new Vector3(0f, WallHeight / 2f, ArenaHalfSize), new Vector3(ArenaHalfSize * 2f, WallHeight, WallThickness));
+            AddWall(new Vector3(-ArenaHalfSize, WallHeight / 2f, 0f), new Vector3(WallThickness, WallHeight, ArenaHalfSize * 2f));
+            AddWall(new Vector3(ArenaHalfSize, WallHeight / 2f, 0f), new Vector3(WallThickness, WallHeight, ArenaHalfSize * 2f));
 
-        BuildPlatformingRoute();
+            BuildPlatformingRoute();
+        }
         AddLevelObjects(boardingPod.Objects);
         AddLevelObjects(perimeterCorridor.Objects);
         AddLevelObjects(boardingPodCrashSite.Objects);
@@ -146,12 +161,22 @@ public sealed partial class Level
         foreach (IResettableLevelObject resettable in levelObjects.OfType<IResettableLevelObject>()) resettable.Reset();
         foreach (WorldInteractable worldObject in worldObjects) RemoveLevelObject(worldObject);
         worldObjects.Clear();
-        AddInitialPickups();
+        if (BuildArenaLayout)
+        {
+            AddInitialPickups();
+        }
     }
 
     public void Render(bool exitActive)
     {
-        Raylib.DrawPlane(Vector3.Zero, new Vector2(ArenaHalfSize * 2f, ArenaHalfSize * 2f), LightsOn ? LitFloorColor : DarkFloorColor);
+        if (BuildArenaLayout)
+        {
+            Raylib.DrawPlane(Vector3.Zero, new Vector2(ArenaHalfSize * 2f, ArenaHalfSize * 2f), LightsOn ? LitFloorColor : DarkFloorColor);
+        }
+        else
+        {
+            Raylib.DrawPlane(new Vector3(-18f, 0f, -13.25f), new Vector2(58f, 16f), LightsOn ? LitFloorColor : DarkFloorColor);
+        }
 
         foreach (ILevelObject levelObject in levelObjects)
         {
@@ -164,32 +189,45 @@ public sealed partial class Level
             levelObject.Render(LightsOn);
         }
 
-        Raylib.DrawGrid((int)ArenaHalfSize * 2, 1f);
+        if (BuildArenaLayout)
+        {
+            Raylib.DrawGrid((int)ArenaHalfSize * 2, 1f);
+        }
     }
 
     public Vector3 ClampToArena(Vector3 position, float radius)
     {
-        return MathUtils.ClampHorizontal(position, -ArenaHalfSize + radius, ArenaHalfSize - radius, -ArenaHalfSize + radius, ArenaHalfSize - radius);
+        return BuildArenaLayout
+            ? MathUtils.ClampHorizontal(position, -ArenaHalfSize + radius, ArenaHalfSize - radius, -ArenaHalfSize + radius, ArenaHalfSize - radius)
+            : position;
     }
 
     private void BuildInteractiveObjects()
     {
-        AddDoor(new Door(SecurityDoorName, new Vector3(-8f, 1.25f, -2f), new Vector3(4f, 2.5f, 0.45f), new Color(120, 76, 58, 255), new Color(72, 130, 84, 130)));
-        AddDoor(new Door(PoweredDoorName, new Vector3(8f, 1.25f, -2f), new Vector3(4f, 2.5f, 0.45f), new Color(92, 54, 54, 255), new Color(72, 130, 190, 130)));
+        if (BuildArenaLayout)
+        {
+            AddDoor(new Door(SecurityDoorName, new Vector3(-8f, 1.25f, -2f), new Vector3(4f, 2.5f, 0.45f), new Color(120, 76, 58, 255), new Color(72, 130, 84, 130)));
+            AddDoor(new Door(PoweredDoorName, new Vector3(8f, 1.25f, -2f), new Vector3(4f, 2.5f, 0.45f), new Color(92, 54, 54, 255), new Color(72, 130, 190, 130)));
+        }
+
         AddDoor(new Door(BoardingPodDoorName, boardingPod.DoorPosition, boardingPod.DoorSize, new Color(84, 112, 132, 255), new Color(72, 170, 190, 130)));
         foreach (Door door in perimeterCorridor.Doors) AddDoor(door);
 
         AddSwitch(new InteractableSwitch(SwitchType.LinkedDoor, boardingPod.SwitchPosition, boardingPod.SwitchSize, boardingPod.SwitchFaceDirection, BoardingPodDoorName));
         foreach (InteractableSwitch interactableSwitch in perimeterCorridor.Switches) AddSwitch(interactableSwitch);
-        AddSwitch(new InteractableSwitch(SwitchType.Lights, new Vector3(-15f, 0.55f, 8f), new Vector3(0.8f, 1.1f, 0.45f)));
-        AddSwitch(new InteractableSwitch(SwitchType.LinkedDoor, new Vector3(-11f, 0.55f, -2f), new Vector3(0.8f, 1.1f, 0.45f), targetDoorName: SecurityDoorName));
-        AddSwitch(new InteractableSwitch(SwitchType.LinkedDoor, new Vector3(11f, 0.55f, -2f), new Vector3(0.8f, 1.1f, 0.45f), targetDoorName: PoweredDoorName));
-        AddSwitch(new InteractableSwitch(SwitchType.ExitActivation, new Vector3(3.5f, 0.55f, 15f), new Vector3(0.8f, 1.1f, 0.45f)));
-        AddInitialPickups();
 
-        AddLevelObject(new LightFixtureObject(new Vector3(-10f, 4.6f, -10f)));
-        AddLevelObject(new LightFixtureObject(new Vector3(0f, 4.6f, 0f)));
-        AddLevelObject(new LightFixtureObject(new Vector3(10f, 4.6f, 10f)));
+        if (BuildArenaLayout)
+        {
+            AddSwitch(new InteractableSwitch(SwitchType.Lights, new Vector3(-15f, 0.55f, 8f), new Vector3(0.8f, 1.1f, 0.45f)));
+            AddSwitch(new InteractableSwitch(SwitchType.LinkedDoor, new Vector3(-11f, 0.55f, -2f), new Vector3(0.8f, 1.1f, 0.45f), targetDoorName: SecurityDoorName));
+            AddSwitch(new InteractableSwitch(SwitchType.LinkedDoor, new Vector3(11f, 0.55f, -2f), new Vector3(0.8f, 1.1f, 0.45f), targetDoorName: PoweredDoorName));
+            AddSwitch(new InteractableSwitch(SwitchType.ExitActivation, new Vector3(3.5f, 0.55f, 15f), new Vector3(0.8f, 1.1f, 0.45f)));
+            AddInitialPickups();
+
+            AddLevelObject(new LightFixtureObject(new Vector3(-10f, 4.6f, -10f)));
+            AddLevelObject(new LightFixtureObject(new Vector3(0f, 4.6f, 0f)));
+            AddLevelObject(new LightFixtureObject(new Vector3(10f, 4.6f, 10f)));
+        }
     }
 
 
