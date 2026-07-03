@@ -20,7 +20,7 @@ public enum SwitchState
     Used
 }
 
-public sealed class InteractableSwitch : IInteractable
+public sealed class InteractableSwitch : IInteractable, ILevelObject, IResettableLevelObject
 {
     public InteractableSwitch(SwitchType type, Vector3 position, Vector3 size, Vector3? faceDirection = null, string? targetDoorName = null)
     {
@@ -55,6 +55,8 @@ public sealed class InteractableSwitch : IInteractable
     public string GetPrompt(Player player) => $"Press E to activate {DisplayName}";
     public bool CanInteract(Player player) => CanUse;
     public void Interact(Player player, Level level) => level.ActivateSwitch(this);
+
+    public void Render(bool lightsOn) => Render();
 
     public void Render()
     {

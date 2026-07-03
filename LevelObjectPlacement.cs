@@ -16,7 +16,7 @@ public sealed partial class Level
         if (flatLook.LengthSquared() < 0.001f) flatLook = Vector3.UnitZ;
         Vector3 preferred = player.Position + Vector3.Normalize(flatLook) * 1.35f + new Vector3(0f, 0.35f, 0f);
         Vector3 clearPosition = FindClearObjectPosition(preferred, new Vector3(1.05f, 0.25f, 0.35f));
-        worldObjects.Add(new WeaponPickup(clearPosition, weapon));
+        AddWorldObject(new WeaponPickup(clearPosition, weapon));
     }
 
     private void AddInitialPickups()
@@ -41,6 +41,7 @@ public sealed partial class Level
         }
 
         worldObjects.Add(worldObject);
+        AddLevelObject(worldObject);
     }
 
     private Vector3 FindClearObjectPosition(Vector3 preferredPosition, Vector3 size)
@@ -64,5 +65,4 @@ public sealed partial class Level
 
         return ClampToArena(preferredPosition, MathF.Max(size.X, size.Z) * 0.5f);
     }
-
 }

@@ -13,8 +13,7 @@ public sealed class BoardingPodModule
     private const float DoorWidth = 2.2f;
     private const float SwitchInset = 0.08f;
 
-    private readonly List<(Vector3 Position, Vector3 Size)> solids = new();
-    private readonly List<(Vector3 Position, Vector3 Size)> detailCubes = new();
+    private readonly List<ILevelObject> objects = new();
 
     public BoardingPodModule(Vector3 origin, ModuleFacing facing)
     {
@@ -40,7 +39,8 @@ public sealed class BoardingPodModule
     public Vector3 DoorPosition { get; }
     public Vector3 DoorSize { get; }
     public Vector3 SwitchSize => TransformSize(new Vector3(0.35f, 0.8f, 0.65f));
-    public IEnumerable<BoundingBox> CollisionBoxes => solids.Select(solid => Level.ToBoundingBox(solid.Position, solid.Size));
+    public IEnumerable<BoundingBox> CollisionBoxes => objects.OfType<ISolidLevelObject>().Select(obj => obj.CollisionBox);
+    public IReadOnlyList<ILevelObject> Objects => objects;
 
     public Vector3 TransformPoint(Vector3 local) => Origin + TransformDirection(local);
 
@@ -63,21 +63,6 @@ public sealed class BoardingPodModule
             : localSize;
     }
 
-    public void Render(Color wallColor, Color floorColor)
-    {
-        foreach (var cube in detailCubes)
-        {
-            Raylib.DrawCubeV(cube.Position, cube.Size, floorColor);
-            Raylib.DrawCubeWiresV(cube.Position, cube.Size, Color.DarkGray);
-        }
-
-        foreach (var solid in solids)
-        {
-            Raylib.DrawCubeV(solid.Position, solid.Size, wallColor);
-            Raylib.DrawCubeWiresV(solid.Position, solid.Size, Color.Black);
-        }
-    }
-
     private void BuildGeometry()
     {
         AddDetail(new Vector3(0f, -FloorThickness / 2f, 0f), new Vector3(Width, FloorThickness, Depth));
@@ -91,9 +76,9 @@ public sealed class BoardingPodModule
         AddSolid(new Vector3(Width / 2f - sideSegmentWidth / 2f, Height / 2f, Depth / 2f - WallThickness / 2f), new Vector3(sideSegmentWidth, Height, WallThickness));
     }
 
-    private void AddSolid(Vector3 localPosition, Vector3 localSize) => solids.Add((TransformPoint(localPosition), TransformSize(localSize)));
+    private void AddSolid(Vector3 localPosition, Vector3 localSize) => objects.Add(new WallObject(TransformPoint(localPosition), TransformSize(localSize)));
 
-    private void AddDetail(Vector3 localPosition, Vector3 localSize) => detailCubes.Add((TransformPoint(localPosition), TransformSize(localSize)));
+    private void AddDetail(Vector3 localPosition, Vector3 localSize) => objects.Add(new ModuleDetailObject(TransformPoint(localPosition), TransformSize(localSize)));
 }
 
 

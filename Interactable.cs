@@ -16,7 +16,7 @@ public interface IInteractable
     void Render();
 }
 
-public abstract class WorldInteractable : IInteractable
+public abstract class WorldInteractable : IInteractable, ILevelObject
 {
     protected WorldInteractable(string displayName, Vector3 position, Vector3 size)
     {
@@ -36,6 +36,8 @@ public abstract class WorldInteractable : IInteractable
     public abstract string GetPrompt(Player player);
     public abstract bool CanInteract(Player player);
     public abstract void Interact(Player player, Level level);
+    public void Render(bool lightsOn) => Render();
+
     public abstract void Render();
 }
 

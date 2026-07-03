@@ -5,23 +5,61 @@ namespace RaylibHaloClone;
 
 public sealed partial class Level
 {
-    private void AddWall(Vector3 position, Vector3 size)
+    private void AddLevelObject(ILevelObject levelObject)
     {
-        walls.Add((position, size));
-        collisionBoxes.Add(ToBoundingBox(position, size));
+        levelObjects.Add(levelObject);
+
+        if (levelObject is ISolidLevelObject solidObject)
+        {
+            solidObjects.Add(solidObject);
+        }
+
+        if (levelObject is IInteractable interactable)
+        {
+            interactables.Add(interactable);
+        }
     }
 
-    private void AddCover(Vector3 position, Vector3 size)
+    private void AddLevelObjects(IEnumerable<ILevelObject> objects)
     {
-        coverObjects.Add((position, size));
-        collisionBoxes.Add(ToBoundingBox(position, size));
+        foreach (ILevelObject levelObject in objects)
+        {
+            AddLevelObject(levelObject);
+        }
     }
 
-    private void AddRoutePlatform(Vector3 position, Vector3 size, bool isFinal = false)
+    private void RemoveLevelObject(ILevelObject levelObject)
     {
-        routePlatforms.Add((position, size, isFinal));
-        collisionBoxes.Add(ToBoundingBox(position, size));
+        levelObjects.Remove(levelObject);
+
+        if (levelObject is ISolidLevelObject solidObject)
+        {
+            solidObjects.Remove(solidObject);
+        }
+
+        if (levelObject is IInteractable interactable)
+        {
+            interactables.Remove(interactable);
+        }
     }
+
+    private void AddDoor(Door door)
+    {
+        doors.Add(door);
+        AddLevelObject(door);
+    }
+
+    private void AddSwitch(InteractableSwitch interactableSwitch)
+    {
+        switches.Add(interactableSwitch);
+        AddLevelObject(interactableSwitch);
+    }
+
+    private void AddWall(Vector3 position, Vector3 size) => AddLevelObject(new WallObject(position, size));
+
+    private void AddCover(Vector3 position, Vector3 size) => AddLevelObject(new CoverObject(position, size));
+
+    private void AddRoutePlatform(Vector3 position, Vector3 size, bool isFinal = false) => AddLevelObject(new PlatformObject(position, size, isFinal));
 
     private void BuildPlatformingRoute()
     {
@@ -45,5 +83,4 @@ public sealed partial class Level
             AddRoutePlatform(position, size, i == PlatformCount - 1);
         }
     }
-
 }

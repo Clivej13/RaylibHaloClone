@@ -18,8 +18,7 @@ public sealed class PerimeterCorridorModule
     private const float DefaultStartSideDoorMargin = 3f;
     private const float DefaultEndSideDoorMargin = 3f;
 
-    private readonly List<(Vector3 Position, Vector3 Size)> solids = new();
-    private readonly List<(Vector3 Position, Vector3 Size)> detailCubes = new();
+    private readonly List<ILevelObject> objects = new();
     private readonly List<Door> doors = new();
     private readonly List<InteractableSwitch> switches = new();
 
@@ -49,7 +48,8 @@ public sealed class PerimeterCorridorModule
     public float SideDoorSpacing { get; }
     public float StartSideDoorMargin { get; }
     public float EndSideDoorMargin { get; }
-    public IEnumerable<BoundingBox> CollisionBoxes => solids.Select(solid => Level.ToBoundingBox(solid.Position, solid.Size));
+    public IEnumerable<BoundingBox> CollisionBoxes => objects.OfType<ISolidLevelObject>().Select(obj => obj.CollisionBox);
+    public IReadOnlyList<ILevelObject> Objects => objects;
     public IReadOnlyList<Door> Doors => doors;
     public IReadOnlyList<InteractableSwitch> Switches => switches;
 
@@ -72,21 +72,6 @@ public sealed class PerimeterCorridorModule
         return Facing is ModuleFacing.East or ModuleFacing.West
             ? new Vector3(localSize.Z, localSize.Y, localSize.X)
             : localSize;
-    }
-
-    public void Render(Color wallColor, Color floorColor)
-    {
-        foreach (var cube in detailCubes)
-        {
-            Raylib.DrawCubeV(cube.Position, cube.Size, floorColor);
-            Raylib.DrawCubeWiresV(cube.Position, cube.Size, Color.DarkGray);
-        }
-
-        foreach (var solid in solids)
-        {
-            Raylib.DrawCubeV(solid.Position, solid.Size, wallColor);
-            Raylib.DrawCubeWiresV(solid.Position, solid.Size, Color.Black);
-        }
     }
 
     private void BuildGeometry()
@@ -176,7 +161,7 @@ public sealed class PerimeterCorridorModule
         switches.Add(new InteractableSwitch(SwitchType.LinkedDoor, TransformPoint(localSwitchPosition), TransformSize(localSwitchSize), TransformDirection(localSwitchFaceDirection), name));
     }
 
-    private void AddSolid(Vector3 localPosition, Vector3 localSize) => solids.Add((TransformPoint(localPosition), TransformSize(localSize)));
-    private void AddDetail(Vector3 localPosition, Vector3 localSize) => detailCubes.Add((TransformPoint(localPosition), TransformSize(localSize)));
+    private void AddSolid(Vector3 localPosition, Vector3 localSize) => objects.Add(new WallObject(TransformPoint(localPosition), TransformSize(localSize)));
+    private void AddDetail(Vector3 localPosition, Vector3 localSize) => objects.Add(new ModuleDetailObject(TransformPoint(localPosition), TransformSize(localSize)));
 }
 
