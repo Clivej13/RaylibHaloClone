@@ -5,7 +5,6 @@ namespace RaylibHaloClone;
 
 public sealed class PerimeterCorridorModule
 {
-    private const float Length = 12f;
     private const float Width = 4.5f;
     private const float Height = 3.2f;
     private const float WallThickness = 0.35f;
@@ -38,6 +37,7 @@ public sealed class PerimeterCorridorModule
         SideDoorSpacing = sideDoorSpacing;
         StartSideDoorMargin = startSideDoorMargin;
         EndSideDoorMargin = endSideDoorMargin;
+        Length = CalculateLength();
         BuildGeometry();
     }
 
@@ -48,6 +48,7 @@ public sealed class PerimeterCorridorModule
     public float SideDoorSpacing { get; }
     public float StartSideDoorMargin { get; }
     public float EndSideDoorMargin { get; }
+    private float Length { get; }
     public IEnumerable<BoundingBox> CollisionBoxes => objects.OfType<ISolidLevelObject>().Select(obj => obj.CollisionBox);
     public IReadOnlyList<ILevelObject> Objects => objects;
     public IReadOnlyList<Door> Doors => doors;
@@ -97,6 +98,10 @@ public sealed class PerimeterCorridorModule
         }
     }
 
+    private float CalculateLength() => SideDoorCount == 0
+        ? StartSideDoorMargin + EndSideDoorMargin
+        : StartSideDoorMargin + EndSideDoorMargin + SideDoorSpacing * (SideDoorCount - 1);
+
     private float[] CalculateSideDoorCenters()
     {
         if (SideDoorCount == 0)
@@ -112,12 +117,6 @@ public sealed class PerimeterCorridorModule
         if (SideDoorCount > 1 && SideDoorSpacing < DoorWidth)
         {
             throw new InvalidOperationException("Perimeter corridor side door spacing must be at least one side door width to avoid overlapping side doors.");
-        }
-
-        float requiredLength = StartSideDoorMargin + EndSideDoorMargin + SideDoorSpacing * (SideDoorCount - 1);
-        if (requiredLength > Length)
-        {
-            throw new InvalidOperationException($"Perimeter corridor side door layout requires {requiredLength:0.##}m, but the corridor length is {Length:0.##}m.");
         }
 
         return Enumerable.Range(0, SideDoorCount)
